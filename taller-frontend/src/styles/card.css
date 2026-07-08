@@ -1,0 +1,58 @@
+.card-btn-container {
+    position: relative;
+    width: 100%;
+    height: 250px; 
+    background: #fff;
+    overflow: hidden;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+}
+
+/* Slide 1: El azul con el icono (Frente) */
+.slide1 {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #2c73df; /* El azul de tu imagen */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2;
+    transition: 0.5s ease-in-out;
+}
+
+/* Slide 2: El contenido que se revela (Atrás) */
+.slide2 {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #2a0270;
+    padding: 20px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    z-index: 1;
+    transition: 0.5s ease-in-out;
+}
+
+.card-btn-container:hover .slide1 {
+    transform: translateY(-100%);
+}
+
+/* Contenedor de texto con scroll para que la descripción larga NO lo rompa */
+.scroll-description {
+    overflow-y: auto;
+    max-height: 160px; 
+    text-align: left;
+    padding-right: 5px;
+}
+
+
+.scroll-description::-webkit-scrollbar { width: 4px; }
+.scroll-description::-webkit-scrollbar-thumb { background: #2c73df; border-radius: 10px; }
