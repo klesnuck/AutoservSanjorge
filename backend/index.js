@@ -344,6 +344,9 @@ const initializeDatabase = async () => {
     );
   `);
 
+  await pool.query(`ALTER TABLE Cotizacion ADD COLUMN IF NOT EXISTS detalles TEXT`).catch(() => {});
+  await pool.query(`ALTER TABLE Cotizacion ADD COLUMN IF NOT EXISTS estado VARCHAR(50) DEFAULT 'Pendiente'`).catch(() => {});
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS Venta (
       idVenta SERIAL PRIMARY KEY,
@@ -361,6 +364,44 @@ const initializeDatabase = async () => {
   } catch (err) {
     console.log('La columna fecha ya existe o hubo un error al crearla');
   }
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS DetalleVenta (
+      idDetalleVenta SERIAL PRIMARY KEY,
+      idVenta INTEGER REFERENCES Venta(idVenta) ON DELETE CASCADE,
+      idProductos INTEGER REFERENCES Productos(idProductos),
+      cantidad INTEGER NOT NULL DEFAULT 1,
+      precio_unitario NUMERIC(10,2) NOT NULL,
+      subtotal NUMERIC(10,2) NOT NULL
+    );
+  `);
+
+  try {
+    await pool.query('ALTER TABLE Venta ALTER COLUMN idProductos DROP NOT NULL');
+  } catch (err) {
+    console.log('Migración Venta.idProductos omitida o ya aplicada:', err.message);
+  }
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS Productos_compatibilidad (
+      id SERIAL PRIMARY KEY,
+      idProductos INT NOT NULL REFERENCES Productos(idProductos) ON DELETE CASCADE,
+      idMarcas INT REFERENCES Marca(idMarcas) ON DELETE CASCADE,
+      idModelos INT REFERENCES Modelos(idModelos) ON DELETE CASCADE,
+      cantidad INT NOT NULL DEFAULT 1,
+      precio_especial NUMERIC(10,2) DEFAULT NULL
+    );
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_compatibilidad_modelos
+    ON Productos_compatibilidad(idModelos)
+  `).catch(() => {});
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_compatibilidad_marcas
+    ON Productos_compatibilidad(idMarcas)
+  `).catch(() => {});
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS Factura (
