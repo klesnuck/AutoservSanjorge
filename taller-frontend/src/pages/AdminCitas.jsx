@@ -325,7 +325,7 @@ export default function AdminCitas() {
 
   return (
     <AdminLayout activeTab="citas">
-      <div className="p-8">
+      <div className="p-4 md:p-8">
         
         {/* Header */}
         <div className="flex justify-between items-start mb-6">

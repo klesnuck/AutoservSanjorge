@@ -126,7 +126,7 @@ export default function Ventas() {
 
   return (
     <AdminLayout activeTab="ventas">
-      <div className="p-8 max-w-7xl mx-auto">
+      <div className="p-4 md:p-8 max-w-7xl mx-auto">
         {/* Header Section */}
         <div className="flex justify-between items-center mb-8 text-left">
           <div>
@@ -237,7 +237,7 @@ export default function Ventas() {
               </button>
             </div>
             <form onSubmit={manejarEnvio} className="p-6 space-y-5">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">Cliente</label>
                   <select 

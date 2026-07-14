@@ -32,7 +32,7 @@ export default function Pagos() {
 
   return (
     <AdminLayout activeTab="pagos">
-      <div className="p-8">
+      <div className="p-4 md:p-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-1">Método de Pago</h1>
         <p className="text-gray-500 text-sm mb-8">Seleccione y procese el método de pago para la orden pendiente</p>
 

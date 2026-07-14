@@ -343,7 +343,7 @@ function AdminDashboard() {
 
   return (
     <AdminLayout activeTab={tab}>
-      <div className="p-8">
+      <div className="p-4 md:p-8">
           {tab === 'dashboard' && (
             <>
               <div className="mb-8">

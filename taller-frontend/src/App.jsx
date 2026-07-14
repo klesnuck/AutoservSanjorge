@@ -42,14 +42,14 @@ function App() {
     <div className="min-h-screen bg-gray-100 text-center">
  
       {showMainNav && (
-        <nav className="bg-blue-950 text-white px-4 py-2 flex gap-4 items-center text-lg justify-between">
-          <Link to="/" className="flex items-center gap-3">
+        <nav className="bg-blue-950 text-white px-4 py-2 flex flex-col md:flex-row gap-4 items-center text-lg justify-between">
+          <Link to="/" className="flex items-center gap-3 w-full md:w-auto justify-center md:justify-start">
             <img src={logo} alt="Logo San Jorge" className="h-12" />
             {currentUser && currentUser.name && (
               <span className="font-semibold text-white/90 text-base border-l border-white/20 pl-3 hidden sm:inline-block">Hola, {currentUser.name.split(' ')[0]}</span>
             )}
           </Link>
-          <div className="nav-links">
+          <div className="nav-links flex-wrap justify-center mt-2 md:mt-0">
             <Link to="/">Inicio</Link>  
             <Link to="/servicios">Cotizar</Link>
             <Link to="/mis-reportes">Reportes</Link>

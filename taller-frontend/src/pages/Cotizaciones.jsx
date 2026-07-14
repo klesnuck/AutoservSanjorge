@@ -180,7 +180,7 @@ export default function Cotizaciones() {
 
   return (
     <AdminLayout activeTab="cotizaciones">
-      <div className="p-8">
+      <div className="p-4 md:p-8">
 
         {/* Header */}
         <div className="flex justify-between items-start mb-8">

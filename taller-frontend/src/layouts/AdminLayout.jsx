@@ -48,9 +48,17 @@ export default function AdminLayout({ children, activeTab, onTabClick }) {
 
   return (
     <div className="flex h-screen bg-gray-50 text-left overflow-hidden">
+      {/* Overlay para móviles */}
+      {isSidebarVisible && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+          onClick={toggleSidebar}
+        ></div>
+      )}
+
       {isSidebarVisible && (
         // editar sidebar
-        <aside className="w-64 bg-blue-950 text-white flex flex-col h-full shrink-0">
+        <aside className="fixed md:relative z-50 w-64 bg-blue-950 text-white flex flex-col h-full shrink-0 shadow-xl md:shadow-none">
           <div className="p-6 flex items-center gap-3">
             <div className="w-28 h-15 bg-transparent flex items-center justify-center">
               <img src={logoFinal} alt="Logo" className="w-full h-full object-contain" />

@@ -1,6 +1,8 @@
 // Importante: Elimina el bloque de 'ul' y 'li' original y usa este
 .nav-links {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 1rem;
   align-items: center;
 

@@ -202,7 +202,7 @@ export default function AdminVehiculos() {
 
   return (
     <AdminLayout activeTab="catalogo-vehiculos">
-      <div className="p-8 max-w-7xl mx-auto">
+      <div className="p-4 md:p-8 max-w-7xl mx-auto">
 
         {/* Header */}
         <div className="flex justify-between items-start mb-8">

@@ -93,7 +93,7 @@ export default function Reportes() {
 
   return (
     <AdminLayout activeTab="reportes">
-      <div className="p-8 max-w-7xl mx-auto">
+      <div className="p-4 md:p-8 max-w-7xl mx-auto">
         
         {/* Header Section */}
         <div className="flex justify-between items-end mb-6">
