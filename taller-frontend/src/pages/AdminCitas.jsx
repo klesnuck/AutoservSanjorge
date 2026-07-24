@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '../layouts/AdminLayout';
 import { useToast } from '../components/Toast';
-import { fetchCitas, updateCita, createCitaCompleta, fetchServicios, fetchVehiculos, deleteCita, fetchMarcas, fetchModelosByMarca, fetchAnios, fetchMotores, fetchUsers } from '../utils/api';
+import { fetchCitas, updateCita, createCitaCompleta, fetchServicios, fetchVehiculos, deleteCita, fetchMarcas, fetchModelosByMarca, fetchAnios, fetchMotores, fetchUsers, fetchFechasNoDisponibles } from '../utils/api';
 
 const generateFechas = () => {
   const fechas = [];
@@ -68,6 +68,49 @@ export default function AdminCitas() {
   // Reagendar modal
   const [reagendarCita, setReagendarCita] = useState(null); // cita a reagendar
   const [fechaReagendar, setFechaReagendar] = useState(null);
+
+  const [fechasLlenas, setFechasLlenas] = useState([]);
+
+  useEffect(() => {
+    const fetchDisponibilidad = async () => {
+      if (!isModalOpen && !reagendarCita) return;
+      
+      let tiempoTotal = 1; // Un estimado mínimo si aún no se seleccionan servicios
+      let serviciosAcalcular = [];
+
+      if (isModalOpen) {
+        serviciosAcalcular = formData.servicios || [];
+      } else if (reagendarCita) {
+        serviciosAcalcular = reagendarCita.servicio ? reagendarCita.servicio.split(',').map(s => s.trim()) : [];
+      }
+
+      if (serviciosAcalcular.length > 0) {
+        tiempoTotal = 0;
+        serviciosAcalcular.forEach(nombreServicio => {
+          const s = serviciosDisponibles.find(sv => sv.nombre === nombreServicio);
+          if (s) {
+            tiempoTotal += Number(s.tiempo_estimado || 0);
+          }
+        });
+      }
+
+      const arrFechasStr = fechasDisponibles.map(f => {
+        const meses = { Ene: '01', Feb: '02', Mar: '03', Abr: '04', May: '05', Jun: '06', Jul: '07', Ago: '08', Sep: '09', Oct: '10', Nov: '11', Dic: '12' };
+        return `${f.year}-${meses[f.mes]}-${f.dia.padStart(2, '0')}`;
+      });
+
+      try {
+        const llenas = await fetchFechasNoDisponibles({
+          fechasRevisar: arrFechasStr,
+          tiempoRequerido: tiempoTotal
+        });
+        setFechasLlenas(llenas || []);
+      } catch (err) {
+        console.error('Error al validar fechas', err);
+      }
+    };
+    fetchDisponibilidad();
+  }, [isModalOpen, reagendarCita, formData.servicios, serviciosDisponibles]);
 
   const loadCitas = async () => {
     try {
@@ -507,18 +550,25 @@ export default function AdminCitas() {
                   <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:border-blue-300 transition-colors">
                     <label className="block text-sm font-bold text-gray-700 mb-3 text-center">Fecha programada *</label>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
-                      {fechasDisponibles.map((f, i) => (
+                      {fechasDisponibles.map((f, i) => {
+                        const mesesObj = { Ene: '01', Feb: '02', Mar: '03', Abr: '04', May: '05', Jun: '06', Jul: '07', Ago: '08', Sep: '09', Oct: '10', Nov: '11', Dic: '12' };
+                        const strKey = `${f.year}-${mesesObj[f.mes]}-${f.dia.padStart(2, '0')}`;
+                        const isLleno = fechasLlenas.includes(strKey);
+                        return (
                         <button
                           key={i}
                           type="button"
-                          onClick={() => setSelectedFecha(f)}
-                          className={`p-4 rounded-xl border-2 text-center transition-all ${selectedFecha?.dia === f.dia ? 'border-[#1A56DB] bg-blue-50/20' : 'border-gray-100/80 hover:border-gray-300 bg-white'}`}
+                          onClick={() => { if (!isLleno) setSelectedFecha(f); }}
+                          disabled={isLleno}
+                          className={`p-4 rounded-xl border-2 text-center transition-all ${isLleno ? 'opacity-50 cursor-not-allowed border-gray-100 bg-gray-50' : selectedFecha?.dia === f.dia ? 'border-[#1A56DB] bg-blue-50/20' : 'border-gray-100/80 hover:border-gray-300 bg-white'}`}
                         >
                           <div className="text-xs font-bold mb-1 text-gray-500">{f.diaSemana}</div>
-                          <div className="text-2xl font-black mb-1 text-gray-900">{f.dia}</div>
+                          <div className={`text-2xl font-black mb-1 ${isLleno ? 'text-gray-400' : 'text-gray-900'}`}>{f.dia}</div>
                           <div className="text-sm font-medium text-gray-500">{f.mes}</div>
+                          {isLleno && <div className="text-[10px] text-red-500 font-bold mt-1">Lleno</div>}
                         </button>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -996,22 +1046,30 @@ export default function AdminCitas() {
             <div className="p-6">
               <p className="text-sm text-gray-600 mb-4">Selecciona la nueva fecha para esta cita:</p>
               <div className="grid grid-cols-4 gap-3">
-                {fechasDisponibles.map((f, i) => (
+                {fechasDisponibles.map((f, i) => {
+                  const mesesObj = { Ene: '01', Feb: '02', Mar: '03', Abr: '04', May: '05', Jun: '06', Jul: '07', Ago: '08', Sep: '09', Oct: '10', Nov: '11', Dic: '12' };
+                  const strKey = `${f.year}-${mesesObj[f.mes]}-${f.dia.padStart(2, '0')}`;
+                  const isLleno = fechasLlenas.includes(strKey);
+                  return (
                   <button
                     key={i}
                     type="button"
-                    onClick={() => setFechaReagendar(f)}
+                    onClick={() => { if (!isLleno) setFechaReagendar(f); }}
+                    disabled={isLleno}
                     className={`p-3 rounded-xl border-2 text-center transition-all ${
+                      isLleno ? 'opacity-50 cursor-not-allowed border-gray-100 bg-gray-50' : 
                       fechaReagendar?.dia === f.dia && fechaReagendar?.mes === f.mes
                         ? 'border-amber-400 bg-amber-50 shadow-sm shadow-amber-200'
                         : 'border-gray-100 hover:border-amber-300 bg-white'
                     }`}
                   >
                     <div className="text-[10px] font-bold text-gray-400 mb-1">{f.diaSemana}</div>
-                    <div className="text-xl font-black text-gray-900">{f.dia}</div>
+                    <div className={`text-xl font-black ${isLleno ? 'text-gray-400' : 'text-gray-900'}`}>{f.dia}</div>
                     <div className="text-xs font-medium text-gray-500">{f.mes}</div>
+                    {isLleno && <div className="text-[9px] text-red-500 font-bold mt-1">Lleno</div>}
                   </button>
-                ))}
+                  );
+                })}
               </div>
 
               {fechaReagendar && (

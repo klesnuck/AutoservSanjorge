@@ -29,6 +29,10 @@ export const createCitaCompleta = (data) => request('/api/citas/completa', {
   method: 'POST',
   body: JSON.stringify(data),
 });
+export const fetchFechasNoDisponibles = (data) => request('/api/citas/fechas-no-disponibles', {
+  method: 'POST',
+  body: JSON.stringify(data),
+});
 export const updateCita = (id, data) => request(`/api/citas/${id}`, {
   method: 'PATCH',
   body: JSON.stringify(data),

@@ -315,10 +315,100 @@ const deleteCita = async (req, res) => {
   }
 };
 
+/**
+ * Verifica la disponibilidad de horas en las fechas indicadas.
+ * 
+ * @async
+ * @function getFechasNoDisponibles
+ */
+const getFechasNoDisponibles = async (req, res) => {
+  try {
+    const { fechasRevisar, tiempoRequerido } = req.body; 
+
+    if (!Array.isArray(fechasRevisar) || fechasRevisar.length === 0) {
+      return res.json([]);
+    }
+    
+    // Preparar el query validando IN
+    const placeholders = fechasRevisar.map((_, i) => `$${i + 1}`).join(', ');
+    
+    // Obtener todos los servicios y sus tiempos
+    const serviciosRes = await pool.query('SELECT nombre, tiempo_estimado FROM Servicios');
+    const serviceMap = {};
+    serviciosRes.rows.forEach(s => {
+      serviceMap[s.nombre.trim().toLowerCase()] = Number(s.tiempo_estimado || 0);
+    });
+
+    const result = await pool.query(
+      `SELECT
+         c.fecha,
+         c.nota,
+         COALESCE(s.tiempo_estimado, 0) AS base_tiempo
+       FROM Cita c
+       LEFT JOIN Cotizacion cz ON cz.idCotizacion = c.idCotizacion
+       LEFT JOIN Servicios s ON s.idServicios = cz.idServicios
+       WHERE c.estado != 'Cancelada' AND TO_CHAR(c.fecha, 'YYYY-MM-DD') IN (${placeholders})`,
+      fechasRevisar
+    );
+
+    const timeMap = {};
+    result.rows.forEach(row => {
+      // row.fecha date convertido a ISO para el mapa
+      const dateStr = new Date(row.fecha.getTime() - (row.fecha.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+      
+      let tiempoCita = 0;
+      let usedNota = false;
+
+      if (row.nota && row.nota.includes('Servicios:')) {
+        const parts = row.nota.split(' | ');
+        const srvPart = parts.find(p => p.startsWith('Servicios:'));
+        if (srvPart) {
+          const srvs = srvPart.replace('Servicios:', '').split(',');
+          srvs.forEach(sName => {
+            const cleanS = sName.trim().toLowerCase();
+            if (serviceMap[cleanS]) {
+              tiempoCita += serviceMap[cleanS];
+            }
+          });
+          usedNota = true;
+        }
+      }
+
+      if (!usedNota) {
+        tiempoCita = Number(row.base_tiempo);
+      }
+
+      timeMap[dateStr] = (timeMap[dateStr] || 0) + tiempoCita;
+    });
+
+    const fechasLlenas = [];
+
+    fechasRevisar.forEach(fechaStr => {
+      // UTC para detectar el dia exacto sin problema de tz
+      const requestedDate = new Date(fechaStr + "T00:00:00Z");
+      const isSaturday = requestedDate.getUTCDay() === 6;
+      const capacidadDiaria = isSaturday ? 5 : 9;
+
+      const ocupado = timeMap[fechaStr] || 0;
+      const solicitado = Number(tiempoRequerido || 0);
+
+      if (ocupado + solicitado > capacidadDiaria) {
+        fechasLlenas.push(fechaStr);
+      }
+    });
+
+    res.json(fechasLlenas);
+  } catch (err) {
+    console.error('Error calculando disponibilidad:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 module.exports = {
   getAllCitas,
   createCita,
   createCitaCompleta,
   updateCita,
   deleteCita,
+  getFechasNoDisponibles,
 };

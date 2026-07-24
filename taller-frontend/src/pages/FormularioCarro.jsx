@@ -5,7 +5,7 @@ import { useToast } from '../components/Toast';
 import {
   createCotizacion, createCita, createCitaCompleta,
   fetchMarcas, fetchModelosByMarca, fetchAnios, fetchMotores,
-  fetchServicios, fetchProductosCompatibles
+  fetchServicios, fetchProductosCompatibles, fetchFechasNoDisponibles
 } from '../utils/api';
 
 const generateFechas = () => {
@@ -64,12 +64,43 @@ function FormularioCarro() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalStep, setModalStep] = useState(1);
   const [selectedFecha, setSelectedFecha] = useState(null);
+  const [fechasLlenas, setFechasLlenas] = useState([]);
   const [contactoForm, setContactoForm] = useState({
     nombre: currentUser?.name || currentUser?.nombre || "",
     telefono: currentUser?.phone || currentUser?.telefono || "",
     correo: currentUser?.email || currentUser?.correo || "",
     notas: ""
   });
+
+  useEffect(() => {
+    const fetchDisponibilidadFechas = async () => {
+      if (!isModalOpen || serviciosDisponibles.length === 0) return;
+
+      let tiempoTotal = 0;
+      form.servicios.forEach(nombreServicio => {
+        const s = serviciosDisponibles.find(sv => sv.nombre === nombreServicio);
+        if (s) {
+          tiempoTotal += Number(s.tiempo_estimado || 0);
+        }
+      });
+
+      const arrFechasStr = fechasDisponibles.map(f => {
+        const meses = { Ene: '01', Feb: '02', Mar: '03', Abr: '04', May: '05', Jun: '06', Jul: '07', Ago: '08', Sep: '09', Oct: '10', Nov: '11', Dic: '12' };
+        return `${f.year}-${meses[f.mes]}-${f.dia.padStart(2, '0')}`;
+      });
+
+      try {
+        const llenas = await fetchFechasNoDisponibles({
+          fechasRevisar: arrFechasStr,
+          tiempoRequerido: tiempoTotal
+        });
+        setFechasLlenas(llenas || []);
+      } catch (err) {
+        console.error('Error al validar fechas', err);
+      }
+    };
+    fetchDisponibilidadFechas();
+  }, [form.servicios, isModalOpen, serviciosDisponibles]);
 
   useEffect(() => {
     if (currentUser) {
@@ -232,7 +263,46 @@ function FormularioCarro() {
         setMarca(marcasData || []);
         setAnio(aniosData || []);
         setMotores(motoresData || []);
-        setServiciosDisponibles(serviciosData || []);
+        
+        const dataServicios = serviciosData || [];
+        setServiciosDisponibles(dataServicios);
+
+        // Mapeo automático del servicio entrante a sus nombres en la base de datos
+        if (location.state?.servicio) {
+          const incoming = location.state.servicio.toLowerCase();
+          let matched = dataServicios.find(s => s.nombre.toLowerCase() === incoming);
+          if (!matched) {
+            if (incoming.includes("cambio") && incoming.includes("aceite")) {
+              matched = dataServicios.find(s => s.nombre.toLowerCase().includes("cambio") && s.nombre.toLowerCase().includes("aceite"));
+            } else if (incoming.includes("afinacion") && incoming.includes("integral")) {
+              matched = dataServicios.find(s => s.nombre.toLowerCase().includes("afinacion") && s.nombre.toLowerCase().includes("integral"));
+            } else if (incoming.includes("afinacion") && (incoming.includes("premium") || incoming.includes("mayor"))) {
+              matched = dataServicios.find(s => s.nombre.toLowerCase().includes("afinacion") && (s.nombre.toLowerCase().includes("premium") || s.nombre.toLowerCase().includes("mayor")));
+            } else if (incoming.includes("afinacion") && incoming.includes("basica")) {
+              matched = dataServicios.find(s => s.nombre.toLowerCase().includes("afinacion") && s.nombre.toLowerCase().includes("basica")) || dataServicios.find(s => s.nombre.toLowerCase().includes("afinacion"));
+            } else if (incoming.includes("frenos")) {
+              matched = dataServicios.find(s => s.nombre.toLowerCase().includes("frenos"));
+            } else {
+              // Intento general de buscar primer palabra clave
+              const palabrasClave = incoming.split(' ').filter(w => w.length > 4);
+              for (const w of palabrasClave) {
+                const found = dataServicios.find(s => s.nombre.toLowerCase().includes(w));
+                if (found) {
+                  matched = found;
+                  break;
+                }
+              }
+            }
+          }
+
+          if (matched && matched.nombre !== location.state.servicio) {
+            setForm(prev => ({
+              ...prev,
+              servicios: prev.servicios.map(s => s === location.state.servicio ? matched.nombre : s)
+            }));
+          }
+        }
+
       } catch (err) {
         console.error('Error cargando catálogos:', err);
       } finally {
@@ -240,7 +310,7 @@ function FormularioCarro() {
       }
     };
     loadCatalogos();
-  }, []);
+  }, [location.state?.servicio]);
 
   // Cargar modelos cuando cambia la marca
   useEffect(() => {
@@ -305,38 +375,33 @@ function FormularioCarro() {
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
 
-            {/* Servicios */}
+            {/* Servicios Seleccionados */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Servicios solicitados</label>
-              {serviciosDisponibles.length === 0 ? (
-                <p className="text-sm text-gray-400 italic">Cargando servicios...</p>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto p-1">
-                  {serviciosDisponibles.map((s) => {
-                    const isSelected = form.servicios?.includes(s.nombre);
-                    return (
-                      <label key={s.id} className={`flex items-center gap-2 p-2.5 border rounded-lg cursor-pointer transition-colors ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50 bg-white'}`}>
-                        <input
-                          type="checkbox"
-                          className="rounded text-blue-600 focus:ring-blue-500"
-                          checked={isSelected || false}
-                          onChange={(e) => {
-                            const checked = e.target.checked;
-                            setForm(prev => {
-                              const current = prev.servicios || [];
-                              const newServicios = checked ? [...current, s.nombre] : current.filter(item => item !== s.nombre);
-                              return { ...prev, servicios: newServicios };
-                            });
-                          }}
-                        />
-                        <span className="text-sm font-medium text-gray-800">
-                          {s.nombre}
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
-              )}
+              <div className="flex flex-wrap gap-2">
+                {form.servicios?.length === 0 ? (
+                  <span className="text-sm text-gray-400">Ningún servicio seleccionado</span>
+                ) : (
+                  form.servicios.map((s, idx) => (
+                    <div key={idx} className="flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-800 px-3 py-2 rounded-lg text-sm font-medium">
+                      <span>{s}</span>
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          setForm(prev => ({
+                            ...prev, 
+                            servicios: prev.servicios.filter(serv => serv !== s)
+                          }));
+                        }}
+                        className="text-blue-500 hover:text-blue-700 bg-white rounded-full p-0.5 shadow-sm"
+                        title="Quitar servicio"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
 
             {/* Año y Marca */}
@@ -429,6 +494,42 @@ function FormularioCarro() {
                   </svg>
                 </div>
               </div>
+            </div>
+
+            {/* Más Servicios (Abajo) */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Seleccionar más servicios</label>
+              {serviciosDisponibles.length === 0 ? (
+                <p className="text-sm text-gray-400 italic">Cargando servicios...</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto p-1 custom-scrollbar">
+                  {serviciosDisponibles
+                    .filter(s => !form.servicios?.includes(s.nombre))
+                    .map((s) => (
+                      <label key={s.id} className="flex items-center gap-2 p-2.5 border rounded-lg cursor-pointer transition-colors border-gray-200 hover:bg-gray-50 bg-white">
+                        <input
+                          type="checkbox"
+                          className="rounded text-blue-600 focus:ring-blue-500"
+                          checked={false}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setForm(prev => ({
+                                ...prev,
+                                servicios: [...(prev.servicios || []), s.nombre]
+                              }));
+                            }
+                          }}
+                        />
+                        <span className="text-sm font-medium text-gray-800">
+                          {s.nombre}
+                        </span>
+                      </label>
+                    ))}
+                  {serviciosDisponibles.filter(s => !form.servicios?.includes(s.nombre)).length === 0 && (
+                    <p className="text-sm text-gray-500 col-span-2">Has seleccionado todos los servicios disponibles.</p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Botones */}
@@ -576,18 +677,25 @@ function FormularioCarro() {
                 <div>
                   <h3 className="text-base font-bold text-gray-900 mb-6">Selecciona una fecha disponible</h3>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
-                    {fechasDisponibles.map((f, i) => (
+                    {fechasDisponibles.map((f, i) => {
+                      const mesesObj = { Ene: '01', Feb: '02', Mar: '03', Abr: '04', May: '05', Jun: '06', Jul: '07', Ago: '08', Sep: '09', Oct: '10', Nov: '11', Dic: '12' };
+                      const strKey = `${f.year}-${mesesObj[f.mes]}-${f.dia.padStart(2, '0')}`;
+                      const isLleno = fechasLlenas.includes(strKey);
+                      
+                      return (
                       <button
                         key={i}
                         type="button"
-                        onClick={() => setSelectedFecha(f)}
-                        className={`p-4 rounded-xl border-2 text-center transition-all ${selectedFecha?.dia === f.dia ? 'border-[#1A56DB] bg-blue-50/20' : 'border-gray-100/80 hover:border-gray-300 bg-white'}`}
+                        onClick={() => { if(!isLleno) setSelectedFecha(f); }}
+                        disabled={isLleno}
+                        className={`p-4 rounded-xl border-2 text-center transition-all ${isLleno ? 'opacity-50 cursor-not-allowed border-gray-100 bg-gray-50' : selectedFecha?.dia === f.dia ? 'border-[#1A56DB] bg-blue-50/20' : 'border-gray-100/80 hover:border-gray-300 bg-white'}`}
                       >
                         <div className="text-xs font-bold mb-1 text-gray-500">{f.diaSemana}</div>
-                        <div className="text-2xl font-black mb-1 text-gray-900">{f.dia}</div>
+                        <div className={`text-2xl font-black mb-1 ${isLleno ? 'text-gray-400' : 'text-gray-900'}`}>{f.dia}</div>
                         <div className="text-sm font-medium text-gray-500">{f.mes}</div>
+                        {isLleno && <div className="text-[10px] text-red-500 font-bold mt-1">Lleno</div>}
                       </button>
-                    ))}
+                    )})}
                   </div>
                 </div>
               )}
