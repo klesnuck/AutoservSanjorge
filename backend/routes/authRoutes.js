@@ -84,6 +84,9 @@ router.post('/register', async (req, res) => {
   }
 });
 
+const jwt = require('jsonwebtoken');
+const { JWT_SECRET } = require('../middleware/auth');
+
 // ---------------------------------------------------------------------------
 // POST /login
 // ---------------------------------------------------------------------------
@@ -92,7 +95,7 @@ router.post('/register', async (req, res) => {
  * POST /api/auth/login
  * Autentica un usuario con email y contraseña (bcrypt).
  * @body {{ email, password }}
- * @returns {{ id, email, name, phone, role, permissions }}
+ * @returns {{ id, email, name, phone, role, permissions, token }}
  */
 router.post('/login', async (req, res) => {
   try {
@@ -121,13 +124,27 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Correo o contraseña incorrectos' });
     }
 
+    const permissions = Array.isArray(user.permisos) ? user.permisos : JSON.parse(user.permisos || '[]');
+
+    const token = jwt.sign(
+      {
+        id: user.idusuarios,
+        email: user.email,
+        role: user.rolename,
+        permissions,
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
     res.json({
       id: user.idusuarios,
       email: user.email,
       name: user.nombre,
       phone: user.telefono || '',
       role: user.rolename,
-      permissions: Array.isArray(user.permisos) ? user.permisos : JSON.parse(user.permisos || '[]')
+      permissions,
+      token,
     });
   } catch (err) {
     console.error(err);

@@ -157,11 +157,44 @@ const updateVehiculo = async (req, res) => {
 
 const deleteVehiculo = async (req, res) => {
   const { id } = req.params;
+  const client = await pool.connect();
   try {
-    await pool.query('DELETE FROM Vehiculos WHERE idVehiculos = $1', [id]);
-    res.json({ message: 'Vehículo eliminado' });
+    await client.query('BEGIN');
+
+    // 1. Obtener los mantenimientos del vehículo para limpiar sus detalles
+    const mants = await client.query('SELECT idMantenimiento FROM Mantenimiento WHERE idVehiculos = $1', [id]);
+    for (const m of mants.rows) {
+      await client.query('DELETE FROM DetalleMantenimientoServicios WHERE idMantenimiento = $1', [m.idmantenimiento]);
+      await client.query('DELETE FROM DetalleMantenimientoProductos WHERE idMantenimiento = $1', [m.idmantenimiento]);
+    }
+    // 2. Eliminar mantenimientos asociados
+    await client.query('DELETE FROM Mantenimiento WHERE idVehiculos = $1', [id]);
+
+    // 3. Eliminar citas asociadas a través de la cotización del vehículo
+    await client.query(
+      'DELETE FROM Cita WHERE idCotizacion IN (SELECT idCotizacion FROM Cotizacion WHERE idVehiculos = $1)',
+      [id]
+    );
+
+    // 4. Desvincular cotizaciones asignando NULL en idVehiculos
+    await client.query('UPDATE Cotizacion SET idVehiculos = NULL WHERE idVehiculos = $1', [id]);
+
+    // 5. Eliminar el vehículo
+    const result = await client.query('DELETE FROM Vehiculos WHERE idVehiculos = $1 RETURNING *', [id]);
+    
+    if (result.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Vehículo no encontrado' });
+    }
+
+    await client.query('COMMIT');
+    res.json({ message: 'Vehículo eliminado correctamente' });
   } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Error al eliminar vehículo:', err);
     res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
   }
 };
 

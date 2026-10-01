@@ -37,10 +37,21 @@ router.put('/marcas/:id', async (req, res) => {
 });
 
 router.delete('/marcas/:id', async (req, res) => {
+  const client = await pool.connect();
   try {
-    await pool.query('DELETE FROM Marca WHERE idMarcas = $1', [req.params.id]);
+    await client.query('BEGIN');
+    const id = req.params.id;
+    await client.query('UPDATE Vehiculos SET idMarcas = NULL WHERE idMarcas = $1', [id]);
+    await client.query('UPDATE Modelos SET idMarcas = NULL WHERE idMarcas = $1', [id]);
+    await client.query('DELETE FROM Marca WHERE idMarcas = $1', [id]);
+    await client.query('COMMIT');
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
 });
 
 // ─── MODELOS ─────────────────────────────────────────────────────────────────
@@ -99,6 +110,7 @@ router.put('/modelos/:id', async (req, res) => {
 
 router.delete('/modelos/:id', async (req, res) => {
   try {
+    await pool.query('UPDATE Vehiculos SET idModelos = NULL WHERE idModelos = $1', [req.params.id]);
     await pool.query('DELETE FROM Modelos WHERE idModelos = $1', [req.params.id]);
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -140,6 +152,7 @@ router.put('/motores/:id', async (req, res) => {
 
 router.delete('/motores/:id', async (req, res) => {
   try {
+    await pool.query('UPDATE Vehiculos SET idMotores = NULL WHERE idMotores = $1', [req.params.id]);
     await pool.query('DELETE FROM Motores WHERE idMotores = $1', [req.params.id]);
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -181,6 +194,7 @@ router.put('/anios/:id', async (req, res) => {
 
 router.delete('/anios/:id', async (req, res) => {
   try {
+    await pool.query('UPDATE Vehiculos SET idAnio = NULL WHERE idAnio = $1', [req.params.id]);
     await pool.query('DELETE FROM Anio WHERE idAnio = $1', [req.params.id]);
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }

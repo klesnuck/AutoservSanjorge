@@ -1,4 +1,4 @@
-﻿/* eslint-disable react-refresh/only-export-components */
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useState, useEffect } from 'react';
 
 export const AuthContext = createContext();
@@ -43,14 +43,24 @@ const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:4000';
 
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
+  const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [roles, setRoles] = useState(DEFAULT_ROLES);
   const [users, setUsers] = useState([]);
 
+  const getAuthHeaders = () => {
+    const activeToken = token || localStorage.getItem('token');
+    return activeToken
+      ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${activeToken}` }
+      : { 'Content-Type': 'application/json' };
+  };
+
   const fetchRoles = async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/roles`);
+      const response = await fetch(`${API_BASE}/api/roles`, {
+        headers: getAuthHeaders(),
+      });
       if (!response.ok) throw new Error('No se pudo cargar roles');
       const data = await response.json();
       setRoles(data);
@@ -61,7 +71,9 @@ export const AuthProvider = ({ children }) => {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/users`);
+      const response = await fetch(`${API_BASE}/api/users`, {
+        headers: getAuthHeaders(),
+      });
       if (!response.ok) throw new Error('No se pudo cargar usuarios');
       const data = await response.json();
       setUsers(data);
@@ -72,8 +84,10 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const savedCurrentUser = JSON.parse(localStorage.getItem('currentUser'));
-    if (savedCurrentUser) {
+    const savedToken = localStorage.getItem('token');
+    if (savedCurrentUser && savedToken) {
       setCurrentUser(savedCurrentUser);
+      setToken(savedToken);
       setIsAuthenticated(true);
     }
 
@@ -96,10 +110,18 @@ export const AuthProvider = ({ children }) => {
       if (!response.ok) {
         return { success: false, error: data.error || 'Credenciales inválidas' };
       }
-      setCurrentUser(data);
+      
+      const { token: userToken, ...userWithoutToken } = data;
+      setCurrentUser(userWithoutToken);
+      setToken(userToken);
       setIsAuthenticated(true);
-      localStorage.setItem('currentUser', JSON.stringify(data));
-      return { success: true, user: data };
+
+      localStorage.setItem('currentUser', JSON.stringify(userWithoutToken));
+      if (userToken) {
+        localStorage.setItem('token', userToken);
+      }
+
+      return { success: true, user: userWithoutToken };
     } catch {
       return { success: false, error: 'No fue posible iniciar sesión' };
     }
@@ -125,18 +147,21 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setIsAuthenticated(false);
     setCurrentUser(null);
+    setToken(null);
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('token');
   };
 
   const saveRole = async (role) => {
     try {
-      // If role.id exists but is not a numeric id returned by backend, treat as create (POST)
       const hasId = role && typeof role.id !== 'undefined' && role.id !== null;
       const isNumericId = hasId && !Number.isNaN(Number(role.id));
       const method = isNumericId ? 'PUT' : 'POST';
       const url = isNumericId ? `${API_BASE}/api/roles/${role.id}` : `${API_BASE}/api/roles`;
+      
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           name: role.name,
           description: role.description,
@@ -145,15 +170,13 @@ export const AuthProvider = ({ children }) => {
       });
       const data = await response.json();
       if (!response.ok) {
-        // try to provide backend error message for UI
         console.error('saveRole failed', response.status, data);
         return { success: false, error: data.error || 'No se pudo guardar el rol' };
       }
-      // If backend returned a well-formed role, update locally to show immediately
+
       if (data && data.id) {
         setRoles((prev) => {
           if (method === 'POST') {
-            // avoid duplicates if id already exists
             if (prev.some((r) => r.id === data.id)) return prev.map((r) => (r.id === data.id ? data : r));
             return [...prev, data];
           }
@@ -162,7 +185,6 @@ export const AuthProvider = ({ children }) => {
         return { success: true, role: data };
       }
 
-      // fallback: refresh roles from backend to ensure consistent state
       await fetchRoles();
       return { success: true, role: data };
     } catch {
@@ -172,7 +194,10 @@ export const AuthProvider = ({ children }) => {
 
   const deleteRole = async (roleId) => {
     try {
-      const response = await fetch(`${API_BASE}/api/roles/${roleId}`, { method: 'DELETE' });
+      const response = await fetch(`${API_BASE}/api/roles/${roleId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
       if (!response.ok) {
         const data = await response.json();
         return { success: false, error: data.error || 'No se pudo eliminar el rol' };
@@ -190,7 +215,7 @@ export const AuthProvider = ({ children }) => {
       const url = user.id ? `${API_BASE}/api/users/${user.id}` : `${API_BASE}/api/users`;
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           name: user.name,
           email: user.email,
@@ -212,7 +237,10 @@ export const AuthProvider = ({ children }) => {
 
   const deleteUser = async (userId) => {
     try {
-      const response = await fetch(`${API_BASE}/api/users/${userId}`, { method: 'DELETE' });
+      const response = await fetch(`${API_BASE}/api/users/${userId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
       if (!response.ok) {
         const data = await response.json();
         return { success: false, error: data.error || 'No se pudo eliminar el usuario' };
@@ -230,6 +258,7 @@ export const AuthProvider = ({ children }) => {
         isAuthenticated,
         loading,
         currentUser,
+        token,
         login,
         register,
         logout,
@@ -237,10 +266,10 @@ export const AuthProvider = ({ children }) => {
         users,
         saveRole,
         deleteRole,
-        users,
         saveUser,
         deleteUser,
         fetchUsers,
+        fetchRoles,
       }}
     >
       {children}

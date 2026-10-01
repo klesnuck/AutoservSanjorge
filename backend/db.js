@@ -16,11 +16,11 @@ const { Pool } = require('pg');
  * @type {import('pg').Pool}
  */
 const pool = new Pool({
-  host: 'localhost',
-  user: 'user1_abd',
-  password: '123',
-  database: 'SanJorge',
-  port: 5432,
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'user1_abd',
+  password: process.env.DB_PASSWORD || '123',
+  database: process.env.DB_NAME || 'SanJorge',
+  port: Number(process.env.DB_PORT) || 5432,
 });
 
 module.exports = pool;

@@ -123,12 +123,13 @@ export default function Vehiculos() {
   };
 
   const eliminarVehiculo = async (id) => {
-    if (!window.confirm('¿Eliminar este vehículo?')) return;
+    if (!window.confirm('¿Eliminar este vehículo? Esta acción no se puede deshacer.')) return;
     try {
       await deleteVehiculo(id);
+      toast.success('Vehículo eliminado correctamente.');
       await loadData();
     } catch (err) {
-      toast.error(err.message, 'Error al eliminar');
+      toast.error(err.message || 'Error al eliminar el vehículo');
     }
   };
 
