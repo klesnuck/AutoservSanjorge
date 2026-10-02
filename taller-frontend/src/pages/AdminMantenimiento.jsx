@@ -8,11 +8,23 @@ import {
   fetchProductos,
   fetchMantenimientos,
   createMantenimiento,
+  updateMantenimiento,
   updateMantenimientoEstado,
   fetchCitas,
   updateCita,
   fetchProductosCompatibles
 } from '../utils/api';
+
+const DEFAULT_CHECKLIST = [
+  { id: 'aceite', item: 'Nivel y calidad de aceite de motor', estado: 'Pendiente', nota: '' },
+  { id: 'frenos', item: 'Estado de balatas y discos de freno', estado: 'Pendiente', nota: '' },
+  { id: 'llantas', item: 'Presión y desgaste de neumáticos', estado: 'Pendiente', nota: '' },
+  { id: 'bateria', item: 'Voltaje y limpieza de bornes de batería', estado: 'Pendiente', nota: '' },
+  { id: 'refrigerante', item: 'Nivel de anticongelante y fuga de mangueras', estado: 'Pendiente', nota: '' },
+  { id: 'filtros', item: 'Filtro de aire y filtro de cabina', estado: 'Pendiente', nota: '' },
+  { id: 'luces', item: 'Sistema de luces (Altas, Bajas, Intermitentes, Stop)', estado: 'Pendiente', nota: '' },
+  { id: 'suspension', item: 'Amortiguadores y bujes de suspensión', estado: 'Pendiente', nota: '' },
+];
 
 export default function AdminMantenimiento() {
   const toast = useToast();
@@ -30,7 +42,7 @@ export default function AdminMantenimiento() {
 
   const [showModal, setShowModal] = useState(false);
   
-  // Estado del formulario
+  // Estado del formulario de alta
   const [nuevo, setNuevo] = useState({
     clienteCorreo: '',
     idVehiculos: '',
@@ -46,6 +58,19 @@ export default function AdminMantenimiento() {
   
   const [refacciones, setRefacciones] = useState([]);
   const [nuevaRefaccion, setNuevaRefaccion] = useState({ id: '', cantidad: 1 });
+
+  // ---------------------------------------------------------------------------
+  // Estado para Hoja de Requisitos e Inspección en Tiempo Real
+  // ---------------------------------------------------------------------------
+  const [showHojaModal, setShowHojaModal] = useState(false);
+  const [mantActivo, setMantActivo] = useState(null);
+  const [checklistHoja, setChecklistHoja] = useState([]);
+  const [trabajosHoja, setTrabajosHoja] = useState([]);
+  const [refaccionesHoja, setRefaccionesHoja] = useState([]);
+  const [nuevoItemChecklist, setNuevoItemChecklist] = useState('');
+  const [observacionesHoja, setObservacionesHoja] = useState('');
+  const [estadoHoja, setEstadoHoja] = useState('En proceso');
+  const [guardandoHoja, setGuardandoHoja] = useState(false);
 
   const loadData = async () => {
     try {
@@ -130,7 +155,6 @@ export default function AdminMantenimiento() {
     if (!nuevoTrabajoId) return;
     const srv = serviciosDb.find(s => s.id === Number(nuevoTrabajoId));
     if (srv) {
-      // Evitar duplicados de servicio
       if (trabajos.find(t => t.id === srv.id)) {
         toast.warning('Este servicio ya fue agregado.');
         return;
@@ -144,7 +168,6 @@ export default function AdminMantenimiento() {
       }]);
       setNuevoTrabajoId('');
 
-      // Auto-cargar refacciones asociadas al servicio
       if (srv.refacciones && Array.isArray(srv.refacciones)) {
         const refsActuales = [...refacciones];
         srv.refacciones.forEach(sr => {
@@ -174,7 +197,6 @@ export default function AdminMantenimiento() {
 
     let clienteEmail = nuevo.clienteCorreo;
     
-    // Try to match client by email or name
     if (cita.parsedEmail) {
       const match = clientes.find(c => c.email.toLowerCase() === cita.parsedEmail.toLowerCase());
       if (match) clienteEmail = match.email;
@@ -189,7 +211,6 @@ export default function AdminMantenimiento() {
       observaciones: cita.parsedNotas ? `Notas de la cita: ${cita.parsedNotas}` : ''
     }));
 
-    // Auto-load services
     if (cita.parsedServicios.length > 0) {
        const matchedServicios = serviciosDb.filter(s => cita.parsedServicios.some(ps => ps.toLowerCase() === s.nombre.toLowerCase()));
        if (matchedServicios.length > 0) {
@@ -240,7 +261,7 @@ export default function AdminMantenimiento() {
 
   const calcularTotal = () => {
     let totalAct = trabajos.reduce((acc, t) => acc + Number(t.precio), 0);
-    totalAct += refacciones.reduce((acc, r) => acc + (Number(r.cantidad) * Number(r.precio_unitario)), 0);
+    totalAct += refacciones.reduce((acc, r) => acc + (Number(r.cantidad) * Number(r.precio_unitario || r.precio || 0)), 0);
     return totalAct;
   };
 
@@ -260,19 +281,20 @@ export default function AdminMantenimiento() {
         fecha: nuevo.fecha,
         observaciones: nuevo.observaciones,
         costo_final: calcularTotal(),
+        checklist: DEFAULT_CHECKLIST,
         servicios: trabajos.map(t => ({ id: t.id, precio: t.precio, descripcion: t.descripcion })),
-        productos: refacciones.map(r => ({ id: r.id, cantidad: r.cantidad, precio: r.precio_unitario }))
+        productos: refacciones.map(r => ({ id: r.id, cantidad: r.cantidad, precio: r.precio_unitario || r.precio }))
       };
 
       await createMantenimiento(payload);
 
-      // Si hay una cita vinculada, marcarla como Atendida
       if (selectedCitaId) {
         await updateCita(selectedCitaId, { estado: 'Atendida' });
       }
 
       await loadData();
       cerrarModal();
+      toast.success('Orden de mantenimiento registrada correctamente');
     } catch (err) {
       toast.error(err.message, 'Error al crear la orden');
     }
@@ -298,6 +320,118 @@ export default function AdminMantenimiento() {
     setSelectedCitaId('');
   };
 
+  // ---------------------------------------------------------------------------
+  // Lógica de Hoja de Trabajo e Inspección en Tiempo Real
+  // ---------------------------------------------------------------------------
+  const abrirHojaTrabajo = (mant) => {
+    setMantActivo(mant);
+    const initialChecklist = mant.checklist && mant.checklist.length > 0 ? mant.checklist : DEFAULT_CHECKLIST;
+    setChecklistHoja(initialChecklist);
+    setTrabajosHoja(mant.servicios ? mant.servicios.map(s => ({ ...s, precio: s.precio })) : []);
+    setRefaccionesHoja(mant.productos ? mant.productos.map(p => ({ ...p, precio_unitario: p.precio })) : []);
+    setObservacionesHoja(mant.observaciones || '');
+    setEstadoHoja(mant.estado || 'En proceso');
+    setShowHojaModal(true);
+  };
+
+  const cerrarHojaTrabajo = () => {
+    setShowHojaModal(false);
+    setMantActivo(null);
+    setChecklistHoja([]);
+    setTrabajosHoja([]);
+    setRefaccionesHoja([]);
+    setObservacionesHoja('');
+    setNuevoItemChecklist('');
+  };
+
+  const updateChecklistItem = (id, field, value) => {
+    setChecklistHoja(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
+  };
+
+  const agregarItemChecklistPersonalizado = () => {
+    if (!nuevoItemChecklist.trim()) return;
+    const newItem = {
+      id: `custom_${Date.now()}`,
+      item: nuevoItemChecklist.trim(),
+      estado: 'Pendiente',
+      nota: ''
+    };
+    setChecklistHoja(prev => [...prev, newItem]);
+    setNuevoItemChecklist('');
+    toast.info('Punto de revisión agregado');
+  };
+
+  const agregarServicioAHoja = (srvId) => {
+    if (!srvId) return;
+    const srv = serviciosDb.find(s => s.id === Number(srvId));
+    if (srv) {
+      if (trabajosHoja.some(t => t.id === srv.id)) {
+        toast.warning('Servicio ya incluido en la orden');
+        return;
+      }
+      setTrabajosHoja(prev => [...prev, {
+        id: srv.id,
+        nombre: srv.nombre,
+        precio: srv.manoObra || srv.mano_obra || srv.costo || 0,
+        descripcion: srv.descripcion
+      }]);
+    }
+  };
+
+  const agregarRefaccionAHoja = (prodId, cantidad) => {
+    if (!prodId || cantidad < 1) return;
+    const prod = productosDb.find(p => p.idproductos === Number(prodId));
+    if (prod) {
+      setRefaccionesHoja(prev => {
+        const existe = prev.find(r => r.id === prod.idproductos);
+        if (existe) {
+          return prev.map(r => r.id === prod.idproductos ? { ...r, cantidad: r.cantidad + cantidad } : r);
+        }
+        return [...prev, {
+          id: prod.idproductos,
+          nombre: prod.nombre,
+          precio_unitario: Number(prod.precio_unitario || prod.precio || 0),
+          cantidad
+        }];
+      });
+    }
+  };
+
+  const calcularTotalHoja = () => {
+    let total = trabajosHoja.reduce((acc, t) => acc + Number(t.precio || 0), 0);
+    total += refaccionesHoja.reduce((acc, r) => acc + (Number(r.cantidad || 1) * Number(r.precio_unitario || r.precio || 0)), 0);
+    return total;
+  };
+
+  const guardarHojaTrabajo = async (nuevoEstado = null) => {
+    if (!mantActivo) return;
+    setGuardandoHoja(true);
+    try {
+      const estadoFinal = nuevoEstado || estadoHoja;
+      const payload = {
+        tecnico: mantActivo.tecnico,
+        kilometraje: mantActivo.kilometraje,
+        estado: estadoFinal,
+        observaciones: observacionesHoja,
+        costo_final: calcularTotalHoja(),
+        checklist: checklistHoja,
+        servicios: trabajosHoja.map(t => ({ id: t.id, precio: t.precio, descripcion: t.descripcion })),
+        productos: refaccionesHoja.map(r => ({ id: r.id, cantidad: r.cantidad, precio: r.precio_unitario }))
+      };
+
+      await updateMantenimiento(mantActivo.id, payload);
+      await loadData();
+      toast.success(nuevoEstado === 'Completado' ? '¡Mantenimiento completado exitosamente!' : 'Hoja de trabajo guardada en tiempo real');
+      if (nuevoEstado === 'Completado') {
+        cerrarHojaTrabajo();
+      }
+    } catch (err) {
+      toast.error(err.message, 'Error al guardar hoja de trabajo');
+    } finally {
+      setGuardandoHoja(false);
+    }
+  };
+
   const totalCompletados = mantenimientos.filter(m => m.estado === 'Completado').length;
   const totalEnProceso = mantenimientos.filter(m => m.estado === 'En proceso').length;
   const ingresosTotales = mantenimientos.reduce((acc, m) => acc + Number(m.costo_final || 0), 0);
@@ -305,102 +439,120 @@ export default function AdminMantenimiento() {
   return (
     <AdminLayout activeTab="mantenimiento">
       <div className="p-4 md:p-8 max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-1">Gestión de Mantenimiento</h2>
-            <p className="text-gray-500 text-sm">Registra y administra el mantenimiento de vehículos</p>
+            <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight mb-1">Centro de Mantenimiento & Inspección</h2>
+            <p className="text-gray-500 text-sm">Gestiona la hoja de requisitos en tiempo real para técnicos y vehículos</p>
           </div>
           <button
             type="button"
             onClick={() => setShowModal(true)}
-            className="bg-[#1a56db] text-white px-5 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition flex items-center gap-2"
+            className="bg-[#1a56db] text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-blue-700 transition flex items-center gap-2 shadow-lg shadow-blue-500/20"
           >
-            <span className="text-lg leading-none">+</span> Nuevo registro
+            <span className="text-xl leading-none">+</span> Nueva Orden
           </button>
         </div>
 
+        {/* Muestras de KPIs */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-center">
-            <span className="text-3xl font-medium text-blue-600">{mantenimientos.length}</span>
-            <span className="text-sm text-gray-500 mt-2">Servicios registrados</span>
+          <div className="bg-white p-6 rounded-2xl border border-gray-200/80 shadow-sm hover:shadow-md transition">
+            <span className="text-3xl font-extrabold text-blue-600">{mantenimientos.length}</span>
+            <span className="text-sm font-medium text-gray-500 block mt-1">Servicios Registrados</span>
           </div>
-          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-center">
-            <span className="text-3xl font-medium text-green-600">{totalCompletados}</span>
-            <span className="text-sm text-gray-500 mt-2">Completados</span>
+          <div className="bg-white p-6 rounded-2xl border border-gray-200/80 shadow-sm hover:shadow-md transition">
+            <span className="text-3xl font-extrabold text-emerald-600">{totalCompletados}</span>
+            <span className="text-sm font-medium text-gray-500 block mt-1">Completados</span>
           </div>
-          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-center">
-            <span className="text-3xl font-medium text-orange-500">{totalEnProceso}</span>
-            <span className="text-sm text-gray-500 mt-2">En proceso</span>
+          <div className="bg-white p-6 rounded-2xl border border-gray-200/80 shadow-sm hover:shadow-md transition">
+            <span className="text-3xl font-extrabold text-amber-500">{totalEnProceso}</span>
+            <span className="text-sm font-medium text-gray-500 block mt-1">En Proceso (Live)</span>
           </div>
-          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-center">
-            <span className="text-3xl font-medium text-blue-600">${ingresosTotales.toLocaleString()}</span>
-            <span className="text-sm text-gray-500 mt-2">Ingresos totales</span>
+          <div className="bg-white p-6 rounded-2xl border border-gray-200/80 shadow-sm hover:shadow-md transition">
+            <span className="text-3xl font-extrabold text-indigo-600">${ingresosTotales.toLocaleString()}</span>
+            <span className="text-sm font-medium text-gray-500 block mt-1">Ingresos Totales</span>
           </div>
         </div>
 
         {loading ? (
-          <div className="text-center py-10 text-gray-500">Cargando reportes de mantenimiento...</div>
+          <div className="text-center py-16 text-gray-400 font-medium">Cargando mantenimientos e inspecciones...</div>
         ) : (
           <div className="space-y-4">
             {mantenimientos.map(m => {
               const servicioBaseName = m.servicios && m.servicios.length > 0 ? m.servicios[0].nombre : 'Mantenimiento General';
               const partesArray = m.productos ? m.productos.map(p => `${p.nombre} x${p.cantidad}`) : [];
-              
+              const totalItemsChecklist = m.checklist ? m.checklist.length : 8;
+              const itemsListos = m.checklist ? m.checklist.filter(c => c.estado === 'OK' || c.estado === 'Cambiado').length : 0;
+              const porcentajeProgreso = Math.round((itemsListos / totalItemsChecklist) * 100);
+
               return (
-                <div key={m.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden text-left">
-                  <div className="p-6 border-b border-gray-100 flex justify-between items-start">
-                    <div className="flex gap-4">
-                      <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center shrink-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m3 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                        </svg>
+                <div key={m.id} className="bg-white rounded-2xl border border-gray-200/80 shadow-sm hover:shadow-md transition overflow-hidden text-left">
+                  <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div className="flex gap-4 items-center">
+                      <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0 font-bold">
+                        🚗
                       </div>
                       <div>
-                        <h3 className="text-lg font-bold text-gray-900">{servicioBaseName}</h3>
-                        <div className="text-sm text-gray-500 flex items-center gap-2 mt-1">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
-                          {m.vehiculo}
-                          <span className="text-gray-300">•</span>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                          {new Date(m.fecha).toLocaleDateString()}
+                        <div className="flex items-center gap-3">
+                          <h3 className="text-lg font-bold text-gray-900">{servicioBaseName}</h3>
+                          <span className={`px-3 py-0.5 rounded-full text-xs font-bold ${m.estado === 'Completado' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                            {m.estado}
+                          </span>
+                        </div>
+                        <div className="text-sm text-gray-500 flex flex-wrap items-center gap-3 mt-1">
+                          <span className="font-semibold text-gray-700">{m.vehiculo}</span>
+                          <span>•</span>
+                          <span>Técnico: <strong className="text-gray-800">{m.tecnico || 'Sin asignar'}</strong></span>
+                          <span>•</span>
+                          <span>{new Date(m.fecha).toLocaleDateString()}</span>
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-xl font-bold text-gray-900 mb-1">${Number(m.costo_final || 0).toLocaleString()}</div>
-                      <button onClick={() => toggleEstado(m.id, m.estado)} className={`px-2.5 py-1 rounded text-xs font-semibold hover:opacity-80 transition ${m.estado === 'Completado' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
-                        {m.estado}
+
+                    <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
+                      <button
+                        type="button"
+                        onClick={() => abrirHojaTrabajo(m)}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center gap-2 shadow-sm"
+                      >
+                        <span>📋 Hoja de Requisitos (Tiempo Real)</span>
+                        <span className="bg-indigo-800/60 px-2 py-0.5 rounded-lg text-[10px] font-mono">{porcentajeProgreso}%</span>
                       </button>
+
+                      <div className="text-right">
+                        <div className="text-xl font-black text-gray-900">${Number(m.costo_final || 0).toLocaleString()}</div>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="p-6 bg-gray-50/50 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="p-6 bg-slate-50/50 grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
-                      <h4 className="text-sm font-semibold text-gray-700 mb-3">Información del vehículo</h4>
-                      <div className="space-y-2 text-sm text-gray-600">
-                        <p><span className="font-medium">Propietario:</span> {m.cliente_nombre} ({m.cliente_email})</p>
-                        <p><span className="font-medium">Kilometraje:</span> {m.kilometraje}</p>
-                        <p><span className="font-medium">Técnico:</span> {m.tecnico}</p>
-                      </div>
+                      <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Vehículo & Propietario</h4>
+                      <p className="text-sm text-gray-700 font-medium">{m.cliente_nombre}</p>
+                      <p className="text-xs text-gray-500">{m.cliente_email}</p>
+                      <p className="text-xs text-gray-600 mt-1">Km: <strong className="text-gray-800">{m.kilometraje}</strong></p>
+                    </div>
 
-                      {partesArray.length > 0 && (
-                        <div className="mt-4">
-                          <h4 className="text-sm font-semibold text-gray-700 mb-2">Partes utilizadas</h4>
-                          <div className="flex flex-wrap gap-2">
-                            {partesArray.map((p, i) => (
-                              <span key={i} className="inline-block bg-blue-50 text-blue-600 px-2 py-1 rounded text-xs items-center justify-center">
-                                {p}
-                              </span>
-                            ))}
-                          </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Partes & Servicios</h4>
+                      {partesArray.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5">
+                          {partesArray.map((p, i) => (
+                            <span key={i} className="bg-blue-50 text-blue-700 border border-blue-100 text-[11px] font-medium px-2 py-0.5 rounded-md">
+                              {p}
+                            </span>
+                          ))}
                         </div>
+                      ) : (
+                        <p className="text-xs text-gray-400">Sin refacciones cargadas</p>
                       )}
                     </div>
+
                     <div>
-                      <h4 className="text-sm font-semibold text-gray-700 mb-2">Observaciones</h4>
-                      <p className="text-sm text-gray-600 leading-relaxed">
-                        {m.observaciones || 'Sin observaciones.'}
-                      </p>
+                      <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Progreso de Inspección</h4>
+                      <div className="w-full bg-gray-200 rounded-full h-2.5 mb-1.5">
+                        <div className="bg-indigo-600 h-2.5 rounded-full transition-all duration-300" style={{ width: `${porcentajeProgreso}%` }}></div>
+                      </div>
+                      <p className="text-xs text-gray-500 text-right">{itemsListos} de {totalItemsChecklist} requisitos verificados</p>
                     </div>
                   </div>
                 </div>
@@ -410,6 +562,283 @@ export default function AdminMantenimiento() {
         )}
       </div>
 
+      {/* --------------------------------------------------------------------------- */}
+      {/* MODAL: HOJA DE REQUISITOS E INSPECCIÓN EN TIEMPO REAL                       */}
+      {/* --------------------------------------------------------------------------- */}
+      {showHojaModal && mantActivo && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[110] flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[92vh] border border-slate-100 animate-fadeIn">
+            
+            {/* Header Modal */}
+            <div className="bg-slate-900 text-white p-6 flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-xl font-bold">
+                  📋
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold tracking-tight">Hoja de Requisitos & Inspección en Tiempo Real</h3>
+                  <p className="text-xs text-slate-300 flex items-center gap-2 mt-0.5">
+                    <span>Vehículo: <strong>{mantActivo.vehiculo}</strong></span>
+                    <span>•</span>
+                    <span>Técnico: <strong>{mantActivo.tecnico}</strong></span>
+                  </p>
+                </div>
+              </div>
+              
+              <button onClick={cerrarHojaTrabajo} className="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition">
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            {/* Barra de estado y progreso */}
+            <div className="bg-indigo-50 border-b border-indigo-100 px-6 py-3 flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-bold text-indigo-900 uppercase">Estado del Mantenimiento:</span>
+                <select
+                  value={estadoHoja}
+                  onChange={(e) => setEstadoHoja(e.target.value)}
+                  className="px-3 py-1 bg-white border border-indigo-200 rounded-lg text-xs font-bold text-indigo-900 outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="En proceso">En proceso</option>
+                  <option value="Completado">Completado</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <span className="text-xs font-bold text-indigo-900">Total Actualizado: </span>
+                  <span className="text-lg font-black text-indigo-700">${calcularTotalHoja().toLocaleString()} MXN</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Body scrollable */}
+            <div className="p-6 overflow-y-auto flex-1 space-y-6">
+
+              {/* SECCIÓN 1: Checklist Precargado & Dinámico */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                <div className="flex justify-between items-center mb-4">
+                  <div>
+                    <h4 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                      <span className="text-indigo-600">✓</span> Lista de Verificación y Requisitos del Vehículo
+                    </h4>
+                    <p className="text-xs text-slate-500">Precargado automáticamente. El técnico puede evaluar cada punto en tiempo real.</p>
+                  </div>
+                  <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">
+                    {checklistHoja.filter(c => c.estado === 'OK' || c.estado === 'Cambiado').length} / {checklistHoja.length} Listos
+                  </span>
+                </div>
+
+                <div className="space-y-3 mb-4">
+                  {checklistHoja.map((chk) => (
+                    <div key={chk.id} className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-slate-100/60 transition">
+                      <div className="flex-1">
+                        <span className="text-sm font-semibold text-slate-800 block">{chk.item}</span>
+                        <input
+                          type="text"
+                          placeholder="Añadir nota u observación del componente..."
+                          value={chk.nota || ''}
+                          onChange={(e) => updateChecklistItem(chk.id, 'nota', e.target.value)}
+                          className="w-full mt-1.5 px-3 py-1 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:border-indigo-500"
+                        />
+                      </div>
+
+                      {/* Botones de estado rápido */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => updateChecklistItem(chk.id, 'estado', 'OK')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 ${chk.estado === 'OK' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 hover:bg-emerald-50'}`}
+                        >
+                          🟢 OK
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateChecklistItem(chk.id, 'estado', 'Atención')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 ${chk.estado === 'Atención' ? 'bg-amber-500 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 hover:bg-amber-50'}`}
+                        >
+                          🟡 Atención
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateChecklistItem(chk.id, 'estado', 'Cambiado')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 ${chk.estado === 'Cambiado' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 hover:bg-indigo-50'}`}
+                        >
+                          🔵 Cambiado
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Añadir nuevo requisito dinámico */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="+ Agregar nuevo punto de revisión o requisito encontrado en el momento..."
+                    value={nuevoItemChecklist}
+                    onChange={(e) => setNuevoItemChecklist(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), agregarItemChecklistPersonalizado())}
+                    className="flex-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={agregarItemChecklistPersonalizado}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition whitespace-nowrap"
+                  >
+                    + Agregar Requisito
+                  </button>
+                </div>
+              </div>
+
+              {/* SECCIÓN 2: Servicios / Mano de obra extra en vivo */}
+              <div className="bg-emerald-50/40 border border-emerald-100 rounded-2xl p-5">
+                <h4 className="text-sm font-bold text-emerald-900 mb-3 flex items-center gap-2">
+                  <span>🛠️</span> Servicios y Mano de Obra (Tiempo Real)
+                </h4>
+
+                <div className="space-y-2 mb-3">
+                  {trabajosHoja.map((t, idx) => (
+                    <div key={idx} className="flex justify-between items-center p-3 bg-white border border-emerald-200/60 rounded-xl text-xs">
+                      <div>
+                        <strong className="text-slate-800">{t.nombre}</strong>
+                        {t.descripcion && <span className="text-slate-500 block text-[11px]">{t.descripcion}</span>}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-bold text-emerald-800">${t.precio} MXN</span>
+                        <button
+                          type="button"
+                          onClick={() => setTrabajosHoja(trabajosHoja.filter((_, i) => i !== idx))}
+                          className="text-red-500 hover:text-red-700 font-bold"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-2">
+                  <select
+                    onChange={(e) => {
+                      agregarServicioAHoja(e.target.value);
+                      e.target.value = '';
+                    }}
+                    className="flex-1 px-4 py-2 bg-white border border-emerald-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value="">+ Añadir servicio adicional del catálogo...</option>
+                    {serviciosDb.map(s => (
+                      <option key={s.id} value={s.id}>{s.nombre} (${s.manoObra || s.mano_obra || s.costo} MXN)</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* SECCIÓN 3: Refacciones / Repuestos extra en vivo */}
+              <div className="bg-amber-50/40 border border-amber-100 rounded-2xl p-5">
+                <h4 className="text-sm font-bold text-amber-900 mb-3 flex items-center gap-2">
+                  <span>🔩</span> Refacciones y Repuestos Utilizados (Tiempo Real)
+                </h4>
+
+                <div className="space-y-2 mb-3">
+                  {refaccionesHoja.map((r, idx) => (
+                    <div key={idx} className="flex justify-between items-center p-3 bg-white border border-amber-200/60 rounded-xl text-xs">
+                      <div>
+                        <strong className="text-slate-800">{r.nombre}</strong>
+                        <span className="text-slate-500 block text-[11px]">Cantidad: x{r.cantidad}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-bold text-amber-800">${(Number(r.precio_unitario || r.precio || 0) * r.cantidad).toLocaleString()} MXN</span>
+                        <button
+                          type="button"
+                          onClick={() => setRefaccionesHoja(refaccionesHoja.filter((_, i) => i !== idx))}
+                          className="text-red-500 hover:text-red-700 font-bold"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-2">
+                  <select
+                    id="selectRefaccionHoja"
+                    className="flex-1 px-4 py-2 bg-white border border-amber-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-amber-500"
+                  >
+                    <option value="">+ Seleccionar refacción del inventario...</option>
+                    {productosDb.map(p => (
+                      <option key={p.idproductos} value={p.idproductos}>{p.nombre} (${p.precio_unitario} - Stock: {p.stock_actual})</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const sel = document.getElementById('selectRefaccionHoja');
+                      if (sel && sel.value) {
+                        agregarRefaccionAHoja(sel.value, 1);
+                        sel.value = '';
+                      }
+                    }}
+                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition"
+                  >
+                    + Añadir Parte
+                  </button>
+                </div>
+              </div>
+
+              {/* SECCIÓN 4: Observaciones Generales del Técnico */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Observaciones Finales del Técnico
+                </label>
+                <textarea
+                  rows="3"
+                  value={observacionesHoja}
+                  onChange={(e) => setObservacionesHoja(e.target.value)}
+                  placeholder="Detalles sobre pruebas de ruta, fallas encontradas o recomendaciones para el cliente..."
+                  className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-indigo-500"
+                ></textarea>
+              </div>
+
+            </div>
+
+            {/* Footer Modal */}
+            <div className="p-6 bg-slate-50 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={cerrarHojaTrabajo}
+                className="w-full md:w-auto px-5 py-2.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-100 transition"
+              >
+                Cancelar
+              </button>
+
+              <div className="flex items-center gap-3 w-full md:w-auto">
+                <button
+                  type="button"
+                  disabled={guardandoHoja}
+                  onClick={() => guardarHojaTrabajo('En proceso')}
+                  className="flex-1 md:flex-initial px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition shadow-md shadow-indigo-500/20 disabled:opacity-50"
+                >
+                  💾 Guardar Avance (Tiempo Real)
+                </button>
+
+                <button
+                  type="button"
+                  disabled={guardandoHoja}
+                  onClick={() => guardarHojaTrabajo('Completado')}
+                  className="flex-1 md:flex-initial px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition shadow-md shadow-emerald-500/20 disabled:opacity-50"
+                >
+                  ✅ Completar Mantenimiento
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* MODAL ORIGINAL NUEVO REGISTRO */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl overflow-hidden flex flex-col my-8 max-h-[90vh]">
@@ -432,7 +861,6 @@ export default function AdminMantenimiento() {
                 {citasPendientes.length > 0 && (
                   <div className="bg-purple-50/50 border border-purple-100 rounded-xl p-6 mb-6">
                     <h3 className="text-sm font-bold text-purple-900 flex items-center gap-2 mb-4">
-                      <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                       Vincular con Cita Pendiente
                     </h3>
                     <select className="w-full px-4 py-2.5 border border-purple-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-purple-500 outline-none"
@@ -449,7 +877,6 @@ export default function AdminMantenimiento() {
 
                 <div className="bg-blue-50/30 border border-blue-50 rounded-xl p-6 mb-6">
                   <h3 className="text-sm font-bold text-blue-900 flex items-center gap-2 mb-4">
-                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
                     Información del Cliente y Vehículo
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
@@ -469,7 +896,6 @@ export default function AdminMantenimiento() {
                           const vehiculoId = e.target.value;
                           setNuevo(prev => ({ ...prev, idVehiculos: vehiculoId }));
 
-                          // Auto-load compatible parts for this vehicle's model
                           if (vehiculoId) {
                             const vehiculo = vehiculosDb.find(v => String(v.id) === String(vehiculoId));
                             if (vehiculo && vehiculo.idmodelos) {
@@ -503,7 +929,6 @@ export default function AdminMantenimiento() {
 
                 <div className="border border-gray-100 rounded-xl p-6 mb-6 shadow-sm">
                   <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2 mb-4">
-                    <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                     Detalles del Servicio
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
@@ -533,18 +958,8 @@ export default function AdminMantenimiento() {
 
                 <div className="bg-green-50/50 border border-green-100 rounded-xl p-6 mb-6">
                   <h3 className="text-sm font-bold text-green-800 flex items-center gap-2 mb-4">
-                    <span className="font-bold text-lg leading-none text-green-600">$</span>
                     Trabajos Realizados (Servicios)
                   </h3>
-
-                  {trabajos.length > 0 && (
-                    <div className="flex gap-2 mb-2 px-1 text-[10px] font-bold text-green-700 uppercase tracking-wider">
-                      <div className="w-1/3 px-4">Servicio</div>
-                      <div className="flex-1 px-4">Descripción</div>
-                      <div className="w-32 px-4">Mano de obra</div>
-                      <div className="w-10"></div>
-                    </div>
-                  )}
 
                   {trabajos.map(t => (
                     <div key={t.id} className="flex gap-2 mb-3 items-center">
@@ -552,7 +967,7 @@ export default function AdminMantenimiento() {
                       <div className="flex-1 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm truncate text-gray-500">{t.descripcion || '-'}</div>
                       <div className="w-32 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-bold text-gray-900">${t.precio}</div>
                       <button type="button" onClick={() => eliminarTrabajo(t.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        ✕
                       </button>
                     </div>
                   ))}
@@ -579,15 +994,14 @@ export default function AdminMantenimiento() {
                   <h3 className="text-sm font-bold text-yellow-800 flex items-center gap-2 mb-4">
                     Partes y Refacciones Utilizadas
                   </h3>
-                  <p className="text-xs text-yellow-700 mb-4 opacity-80">* Las refacciones ligadas a los servicios agregados se precargan automáticamente. Puedes añadir más si fue necesario.</p>
 
                   {refacciones.map(r => (
                     <div key={r.id} className="flex gap-2 mb-3 items-center">
                       <div className="flex-1 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm truncate">{r.nombre}</div>
                       <div className="w-20 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-center">x{r.cantidad}</div>
-                      <div className="w-32 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-right">${(Number(r.precio_unitario) * r.cantidad).toLocaleString()}</div>
+                      <div className="w-32 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-right">${(Number(r.precio_unitario || r.precio || 0) * r.cantidad).toLocaleString()}</div>
                       <button type="button" onClick={() => eliminarRefaccion(r.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        ✕
                       </button>
                     </div>
                   ))}
@@ -620,9 +1034,6 @@ export default function AdminMantenimiento() {
                   <div>
                     <div className="text-sm text-blue-200 mb-1">Total del Servicio</div>
                     <div className="text-3xl font-bold">${calcularTotal().toLocaleString()} MXN</div>
-                  </div>
-                  <div>
-                    <svg className="w-12 h-12 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                   </div>
                 </div>
               </form>

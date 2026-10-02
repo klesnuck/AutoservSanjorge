@@ -1,5 +1,17 @@
 const pool = require('../db');
 
+// Asegurar que la tabla Mantenimiento tenga la columna checklist
+const ensureChecklistColumn = async () => {
+  try {
+    await pool.query(`
+      ALTER TABLE Mantenimiento ADD COLUMN IF NOT EXISTS checklist TEXT;
+    `);
+  } catch (err) {
+    console.error('Error verificando columna checklist:', err.message);
+  }
+};
+ensureChecklistColumn();
+
 const getMantenimientos = async (req, res) => {
   try {
     const result = await pool.query(`
@@ -11,6 +23,7 @@ const getMantenimientos = async (req, res) => {
         m.fecha,
         m.observaciones,
         m.costo_final,
+        m.checklist,
         v.idVehiculos as vehiculo_id,
         v.placa as vehiculo_placa,
         mo.nombre as vehiculo_modelo,
@@ -42,11 +55,21 @@ const getMantenimientos = async (req, res) => {
         WHERE d.idMantenimiento = $1
       `, [m.id]);
 
+      let parsedChecklist = [];
+      if (m.checklist) {
+        try {
+          parsedChecklist = JSON.parse(m.checklist);
+        } catch {
+          parsedChecklist = [];
+        }
+      }
+
       return {
         ...m,
         vehiculo: `${m.vehiculo_marca || ''} ${m.vehiculo_modelo || ''} • ${m.vehiculo_placa || ''}`,
         servicios: servRes.rows,
-        productos: prodRes.rows
+        productos: prodRes.rows,
+        checklist: parsedChecklist
       };
     }));
     
@@ -61,12 +84,13 @@ const createMantenimiento = async (req, res) => {
   try {
     await client.query('BEGIN');
     
-    const { idVehiculos, tecnico, kilometraje, estado, fecha, observaciones, costo_final, servicios, productos } = req.body;
+    const { idVehiculos, tecnico, kilometraje, estado, fecha, observaciones, costo_final, servicios, productos, checklist } = req.body;
+    const checklistJson = checklist ? JSON.stringify(checklist) : null;
     
     const mantRes = await client.query(`
-      INSERT INTO Mantenimiento (idVehiculos, tecnico, kilometraje, estado, fecha, observaciones, costo_final)
-      VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING idMantenimiento
-    `, [idVehiculos, tecnico, kilometraje, estado || 'En proceso', fecha, observaciones || '', costo_final || 0]);
+      INSERT INTO Mantenimiento (idVehiculos, tecnico, kilometraje, estado, fecha, observaciones, costo_final, checklist)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING idMantenimiento
+    `, [idVehiculos, tecnico, kilometraje, estado || 'En proceso', fecha, observaciones || '', costo_final || 0, checklistJson]);
     
     const idMantenimiento = mantRes.rows[0].idmantenimiento;
     
@@ -103,6 +127,67 @@ const createMantenimiento = async (req, res) => {
   }
 };
 
+const updateMantenimientoFull = async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { id } = req.params;
+    const { tecnico, kilometraje, estado, observaciones, costo_final, checklist, servicios, productos } = req.body;
+    
+    await client.query('BEGIN');
+    
+    const checklistJson = checklist ? JSON.stringify(checklist) : null;
+
+    await client.query(`
+      UPDATE Mantenimiento
+      SET tecnico = COALESCE($1, tecnico),
+          kilometraje = COALESCE($2, kilometraje),
+          estado = COALESCE($3, estado),
+          observaciones = COALESCE($4, observaciones),
+          costo_final = COALESCE($5, costo_final),
+          checklist = COALESCE($6, checklist)
+      WHERE idMantenimiento = $7
+    `, [tecnico, kilometraje, estado, observaciones, costo_final, checklistJson, id]);
+
+    if (servicios && Array.isArray(servicios)) {
+      await client.query(`DELETE FROM DetalleMantenimientoServicios WHERE idMantenimiento = $1`, [id]);
+      for (const s of servicios) {
+        await client.query(`
+          INSERT INTO DetalleMantenimientoServicios (idMantenimiento, idServicios, precio, descripcion)
+          VALUES ($1, $2, $3, $4)
+        `, [id, s.id, s.precio || 0, s.descripcion || '']);
+      }
+    }
+
+    if (productos && Array.isArray(productos)) {
+      // Revertir stock de productos anteriores
+      const oldProds = await client.query(`SELECT idProductos, cantidad FROM DetalleMantenimientoProductos WHERE idMantenimiento = $1`, [id]);
+      for (const oldP of oldProds.rows) {
+        await client.query(`UPDATE Productos SET stock_actual = stock_actual + $1 WHERE idProductos = $2`, [oldP.cantidad, oldP.idproductos]);
+      }
+
+      await client.query(`DELETE FROM DetalleMantenimientoProductos WHERE idMantenimiento = $1`, [id]);
+      for (const p of productos) {
+        await client.query(`
+          INSERT INTO DetalleMantenimientoProductos (idMantenimiento, idProductos, cantidad, precio)
+          VALUES ($1, $2, $3, $4)
+        `, [id, p.id, p.cantidad || 1, p.precio || 0]);
+
+        await client.query(`
+          UPDATE Productos SET stock_actual = stock_actual - $1 WHERE idProductos = $2
+        `, [p.cantidad || 1, p.id]);
+      }
+    }
+
+    await client.query('COMMIT');
+    res.json({ success: true });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+};
+
 const updateMantenimientoEstado = async (req, res) => {
   try {
     const { id } = req.params;
@@ -121,5 +206,6 @@ const updateMantenimientoEstado = async (req, res) => {
 module.exports = {
   getMantenimientos,
   createMantenimiento,
+  updateMantenimientoFull,
   updateMantenimientoEstado
 };

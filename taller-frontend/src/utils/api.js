@@ -154,6 +154,7 @@ export const createCompra = (data) => request('/api/compras', {
 // --- Mantenimiento ---
 export const fetchMantenimientos = () => request('/api/mantenimientos');
 export const createMantenimiento = (data) => request('/api/mantenimientos', { method: 'POST', body: JSON.stringify(data) });
+export const updateMantenimiento = (id, data) => request(`/api/mantenimientos/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 export const updateMantenimientoEstado = (id, estado) => request(`/api/mantenimientos/${id}/estado`, { method: 'PUT', body: JSON.stringify({ estado }) });
 
 // --- Reportes ---
