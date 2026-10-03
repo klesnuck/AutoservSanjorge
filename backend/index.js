@@ -565,19 +565,24 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reportes', reportesRoutes);
 app.use('/api/catalogo', catalogoRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/auth', authRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/users', usersRoutes);
 app.use('/api/roles', rolesRoutes);
+app.use('/roles', rolesRoutes);
 
 const PORT = process.env.PORT || 4000;
 
-// Inicialización de la base de datos en segundo plano (segura para serverless)
-initializeDatabase()
-  .then(() => {
-    console.log('Base de datos verificada/inicializada.');
-  })
-  .catch((err) => {
-    console.error('Advertencia en inicialización de base de datos:', err.message);
-  });
+// Inicialización de la base de datos (desactivada en Vercel Serverless para evitar bloqueos)
+if (!process.env.VERCEL) {
+  initializeDatabase()
+    .then(() => {
+      console.log('Base de datos verificada/inicializada.');
+    })
+    .catch((err) => {
+      console.error('Advertencia en inicialización de base de datos:', err.message);
+    });
+}
 
 if (!process.env.VERCEL) {
   app.listen(PORT, () => {
