@@ -570,13 +570,19 @@ app.use('/api/roles', rolesRoutes);
 
 const PORT = process.env.PORT || 4000;
 
+// Inicialización de la base de datos en segundo plano (segura para serverless)
 initializeDatabase()
   .then(() => {
-    app.listen(PORT, () => {
-      console.log(`Servidor corriendo en puerto ${PORT}`);
-    });
+    console.log('Base de datos verificada/inicializada.');
   })
   .catch((err) => {
-    console.error('Error inicializando la base de datos:', err);
-    process.exit(1);
+    console.error('Advertencia en inicialización de base de datos:', err.message);
   });
+
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`Servidor corriendo en puerto ${PORT}`);
+  });
+}
+
+module.exports = app;
