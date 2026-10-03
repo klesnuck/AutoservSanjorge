@@ -248,9 +248,8 @@ VALUES
   ('Cliente', 'Acceso al portal de clientes', '["Cotizaciones","Reportes"]')
 ON CONFLICT DO NOTHING;
 
--- Insertar usuario Administrador por defecto (Contraseña: admin123)
--- Hash bcrypt de "admin123": $2a$10$E9V9LdD2rW9G6GzN2zYwWe6vA0A0A0A0A0A0A0A0A0A0A0A0A0A0A
+-- Insertar o actualizar usuario Administrador por defecto (Email: admin@admin.com / Contraseña: admin123)
+DELETE FROM Usuarios WHERE email = 'admin@admin.com';
 INSERT INTO Usuarios (idRoles, email, contrasena, nombre, telefono)
-SELECT idRoles, 'admin@admin.com', '$2a$10$7Z9rV9wN8wN0X1Y2Z3A4B5C6D7E8F9G0H1I2J3K4L5M6N7O8P9Q0R', 'Administrador', ''
-FROM Roles WHERE nombre = 'Administrador'
-ON CONFLICT DO NOTHING;
+SELECT idRoles, 'admin@admin.com', '$2a$10$5xXZeYGdGAboPDX9LleGnPs.HRO9rRaJhTD3G9zwP2P', 'Administrador', ''
+FROM Roles WHERE nombre = 'Administrador';
