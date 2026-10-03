@@ -5,7 +5,7 @@
       "src": "taller-frontend/package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "taller-frontend/dist"
+        "distDir": "dist"
       }
     },
     {
