@@ -543,6 +543,30 @@ app.get('/', (req, res) => {
   res.send('Backend en funcionamiento');
 });
 
+app.get('/api/health', async (req, res) => {
+  try {
+    const hasDbUrl = Boolean(process.env.DATABASE_URL || process.env.SUPABASE_DB_URL);
+    let dbStatus = 'not_checked';
+    let dbError = null;
+    try {
+      const { rows } = await pool.query('SELECT NOW()');
+      dbStatus = 'connected';
+    } catch (err) {
+      dbStatus = 'error';
+      dbError = err.message;
+    }
+    res.json({
+      status: 'ok',
+      hasDbUrl,
+      dbStatus,
+      dbError,
+      isVercel: Boolean(process.env.VERCEL)
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ---------------------------------------------------------------------------
 // Rutas de módulos especializados (delegadas a enrutadores externos)
 // ---------------------------------------------------------------------------
