@@ -33,7 +33,7 @@ function Register() {
 
   const checkExistingUser = async (email, name) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:4000'}/api/users`);
+      const response = await fetch(`${import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || ''}/api/users`);
       if (response.ok) {
         const users = await response.json();
         const existingEmail = users.find(user => user.email.toLowerCase() === email.toLowerCase());

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '../layouts/AdminLayout';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+const API = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE || '';
 
 async function apiFetch(path, opts = {}) {
   const res = await fetch(`${API}${path}`, {

@@ -39,7 +39,7 @@ const DEFAULT_ROLES = [
   },
 ];
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:4000';
+const API_BASE = import.meta.env.VITE_API_BASE || import.meta.env.VITE_API_URL || '';
 
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
