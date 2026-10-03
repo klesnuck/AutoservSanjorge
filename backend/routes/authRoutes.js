@@ -110,7 +110,7 @@ router.post('/login', async (req, res) => {
       `SELECT u.idUsuarios, u.email, ${passwordReference}, u.nombre, u.telefono, r.nombre AS rolename, r.permisos
        FROM Usuarios u
        JOIN Roles r ON u.${userRoleIdColumn} = r.idRoles
-       WHERE u.email = $1`,
+       WHERE LOWER(u.email) = LOWER($1)`,
       [email.trim()]
     );
 
