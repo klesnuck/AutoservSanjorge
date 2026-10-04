@@ -371,14 +371,14 @@ export default function AdminCitas() {
       <div className="p-4 md:p-8">
         
         {/* Header */}
-        <div className="flex justify-between items-start mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestión de Citas</h1>
-            <p className="text-gray-500">Administra las citas programadas y su estado</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">Gestión de Citas</h1>
+            <p className="text-gray-500 text-sm">Administra las citas programadas y su estado</p>
           </div>
           <button 
             onClick={() => setIsModalOpen(true)}
-            className="bg-blue-600 text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors flex items-center gap-2"
+            className="w-full sm:w-auto bg-blue-600 text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
           >
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -388,8 +388,8 @@ export default function AdminCitas() {
         </div>
 
         {/* Filters Bar */}
-        <div className="bg-white p-4 rounded-xl border border-gray-200 mb-6 flex flex-col md:flex-row gap-4 shadow-sm">
-          <div className="flex-1 relative">
+        <div className="bg-white p-4 rounded-xl border border-gray-200 mb-6 flex flex-col sm:flex-row flex-wrap md:flex-nowrap gap-3 shadow-sm">
+          <div className="flex-1 min-w-[200px] relative">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 absolute left-3 top-2.5 text-gray-400">
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
             </svg>
@@ -399,7 +399,7 @@ export default function AdminCitas() {
               className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" 
             />
           </div>
-          <div className="md:w-64 relative">
+          <div className="w-full sm:w-48 md:w-56 relative">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 absolute left-3 top-2.5 text-gray-400">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" />
             </svg>
@@ -413,7 +413,7 @@ export default function AdminCitas() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
             </svg>
           </div>
-          <div className="md:w-64">
+          <div className="w-full sm:w-44 md:w-48">
             <input 
               type="date" 
               className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white focus:ring-2 focus:ring-blue-500 outline-none" 
@@ -424,34 +424,40 @@ export default function AdminCitas() {
         {/* Appointment List */}
         <div className="space-y-4">
           {citas.map(cita => (
-            <div key={cita.id} className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm relative">
-              {/* Badge */}
-              <div className="absolute top-6 right-6">
-                <span className={`px-4 py-1.5 rounded-full text-xs font-bold ${getBadgeColor(cita.estado)}`}>
+            <div key={cita.id} className="bg-white p-4 sm:p-6 rounded-xl border border-gray-200 shadow-sm">
+              
+              {/* Top row: Profile & Badge */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+                <div className="flex gap-3 sm:gap-4 items-center">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-lg sm:text-xl shrink-0">
+                    {cita.avatar}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-base sm:text-lg">{cita.cliente}</h3>
+                    <div className="text-xs sm:text-sm text-gray-500 flex flex-wrap items-center gap-1.5 sm:gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 shrink-0"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
+                      <span>{cita.email}</span>
+                      {cita.telefono && (
+                        <>
+                          <span className="text-gray-300">•</span>
+                          <span>{cita.telefono}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <span className={`self-start sm:self-auto px-3.5 py-1 rounded-full text-xs font-bold ${getBadgeColor(cita.estado)}`}>
                   {cita.estado}
                 </span>
               </div>
 
-              {/* Top row: Profile */}
-              <div className="flex gap-4 items-center mb-6">
-                <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xl">
-                  {cita.avatar}
-                </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 text-lg">{cita.cliente}</h3>
-                  <div className="text-sm text-gray-500 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
-                    {cita.email} <span className="text-gray-300">•</span> {cita.telefono}
-                  </div>
-                </div>
-              </div>
-
               {/* Grid block */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div>
                   <div className="text-xs text-gray-400 font-semibold mb-1 uppercase tracking-wider">Vehículo</div>
                   <div className="flex items-center gap-2 text-sm font-medium text-gray-800">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-gray-400"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677h3.351a.75.75 0 01.696.471z" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-gray-400 shrink-0"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677h3.351a.75.75 0 01.696.471z" /></svg>
                     {cita.vehiculo}
                   </div>
                 </div>
@@ -462,7 +468,7 @@ export default function AdminCitas() {
                 <div>
                   <div className="text-xs text-gray-400 font-semibold mb-1 uppercase tracking-wider">Fecha programada</div>
                   <div className="flex items-center gap-2 text-sm font-medium text-gray-800">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-gray-400"><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-gray-400 shrink-0"><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>
                     {cita.fecha}
                   </div>
                 </div>
@@ -473,14 +479,14 @@ export default function AdminCitas() {
               </div>
 
               {/* Bottom Actions Row */}
-              <div className="flex justify-between items-center relative z-10">
-                <div className="flex gap-2">
-                  <button onClick={() => setViewingCita(cita)} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition-colors">Ver detalles</button>
-                  <button onClick={() => handleUpdateCita(cita.id, { estado: 'Confirmada' })} className="bg-[#10b981] hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs font-bold transition-colors">Confirmar</button>
-                  <button onClick={() => handleReagendar(cita)} className="bg-[#f59e0b] hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-xs font-bold transition-colors">Reagendar</button>
-                  <button onClick={() => handleEditCitaClick(cita)} className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-xs font-bold transition-colors">Editar</button>
+              <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 pt-4 border-t border-gray-100">
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={() => setViewingCita(cita)} className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-lg text-xs font-bold transition-colors">Ver detalles</button>
+                  <button onClick={() => handleUpdateCita(cita.id, { estado: 'Confirmada' })} className="flex-1 sm:flex-none bg-[#10b981] hover:bg-emerald-600 text-white px-3.5 py-2 rounded-lg text-xs font-bold transition-colors">Confirmar</button>
+                  <button onClick={() => handleReagendar(cita)} className="flex-1 sm:flex-none bg-[#f59e0b] hover:bg-amber-600 text-white px-3.5 py-2 rounded-lg text-xs font-bold transition-colors">Reagendar</button>
+                  <button onClick={() => handleEditCitaClick(cita)} className="flex-1 sm:flex-none bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-lg text-xs font-bold transition-colors">Editar</button>
                 </div>
-                <button onClick={() => handleDeleteCita(cita.id)} className="text-red-500 hover:text-red-700 text-xs font-bold transition-colors">
+                <button onClick={() => handleDeleteCita(cita.id)} className="text-red-500 hover:text-red-700 text-xs font-bold transition-colors text-right sm:text-left self-end sm:self-auto pt-2 sm:pt-0">
                   Eliminar cita
                 </button>
               </div>

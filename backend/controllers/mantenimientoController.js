@@ -31,8 +31,8 @@ const getMantenimientos = async (req, res) => {
         u.nombre as cliente_nombre,
         u.email as cliente_email
       FROM Mantenimiento m
-      JOIN Vehiculos v ON m.idVehiculos = v.idVehiculos
-      JOIN Usuarios u ON v.idUsuarios = u.idUsuarios
+      LEFT JOIN Vehiculos v ON m.idVehiculos = v.idVehiculos
+      LEFT JOIN Usuarios u ON v.idUsuarios = u.idUsuarios
       LEFT JOIN Modelos mo ON v.idModelos = mo.idModelos
       LEFT JOIN Marca ma ON v.idMarcas = ma.idMarcas
       ORDER BY m.fecha DESC, m.idMantenimiento DESC
@@ -94,27 +94,46 @@ const createMantenimiento = async (req, res) => {
     
     const idMantenimiento = mantRes.rows[0].idmantenimiento;
     
+    let extraObservaciones = [];
+
     if (servicios && Array.isArray(servicios)) {
       for (const s of servicios) {
-        await client.query(`
-          INSERT INTO DetalleMantenimientoServicios (idMantenimiento, idServicios, precio, descripcion)
-          VALUES ($1, $2, $3, $4)
-        `, [idMantenimiento, s.id, s.precio || 0, s.descripcion || '']);
+        const sIdNum = parseInt(s.id, 10);
+        if (!isNaN(sIdNum) && sIdNum > 0) {
+          await client.query(`
+            INSERT INTO DetalleMantenimientoServicios (idMantenimiento, idServicios, precio, descripcion)
+            VALUES ($1, $2, $3, $4)
+          `, [idMantenimiento, sIdNum, s.precio || 0, s.descripcion || '']);
+        } else if (s.nombre) {
+          extraObservaciones.push(`[Servicio Adicional: ${s.nombre} ($${s.precio || 0}) ${s.descripcion ? '- ' + s.descripcion : ''}]`);
+        }
       }
     }
     
     if (productos && Array.isArray(productos)) {
       for (const p of productos) {
-        await client.query(`
-          INSERT INTO DetalleMantenimientoProductos (idMantenimiento, idProductos, cantidad, precio)
-          VALUES ($1, $2, $3, $4)
-        `, [idMantenimiento, p.id, p.cantidad || 1, p.precio || 0]);
-        
-        // Descontar inventario
-        await client.query(`
-          UPDATE Productos SET stock_actual = stock_actual - $1 WHERE idProductos = $2
-        `, [p.cantidad || 1, p.id]);
+        const pIdNum = parseInt(p.id, 10);
+        if (!isNaN(pIdNum) && pIdNum > 0) {
+          await client.query(`
+            INSERT INTO DetalleMantenimientoProductos (idMantenimiento, idProductos, cantidad, precio)
+            VALUES ($1, $2, $3, $4)
+          `, [idMantenimiento, pIdNum, p.cantidad || 1, p.precio || 0]);
+          
+          // Descontar inventario
+          await client.query(`
+            UPDATE Productos SET stock_actual = stock_actual - $1 WHERE idProductos = $2
+          `, [p.cantidad || 1, pIdNum]);
+        } else if (p.nombre) {
+          extraObservaciones.push(`[Refacción Especial: ${p.nombre} x${p.cantidad || 1} ($${p.precio || 0} c/u)]`);
+        }
       }
+    }
+
+    if (extraObservaciones.length > 0) {
+      const obsFinales = (observaciones || '') + ' ' + extraObservaciones.join(' ');
+      await client.query(`
+        UPDATE Mantenimiento SET observaciones = $1 WHERE idMantenimiento = $2
+      `, [obsFinales.trim(), idMantenimiento]);
     }
     
     await client.query('COMMIT');
@@ -151,10 +170,13 @@ const updateMantenimientoFull = async (req, res) => {
     if (servicios && Array.isArray(servicios)) {
       await client.query(`DELETE FROM DetalleMantenimientoServicios WHERE idMantenimiento = $1`, [id]);
       for (const s of servicios) {
-        await client.query(`
-          INSERT INTO DetalleMantenimientoServicios (idMantenimiento, idServicios, precio, descripcion)
-          VALUES ($1, $2, $3, $4)
-        `, [id, s.id, s.precio || 0, s.descripcion || '']);
+        const sIdNum = parseInt(s.id, 10);
+        if (!isNaN(sIdNum) && sIdNum > 0) {
+          await client.query(`
+            INSERT INTO DetalleMantenimientoServicios (idMantenimiento, idServicios, precio, descripcion)
+            VALUES ($1, $2, $3, $4)
+          `, [id, sIdNum, s.precio || 0, s.descripcion || '']);
+        }
       }
     }
 
@@ -167,14 +189,17 @@ const updateMantenimientoFull = async (req, res) => {
 
       await client.query(`DELETE FROM DetalleMantenimientoProductos WHERE idMantenimiento = $1`, [id]);
       for (const p of productos) {
-        await client.query(`
-          INSERT INTO DetalleMantenimientoProductos (idMantenimiento, idProductos, cantidad, precio)
-          VALUES ($1, $2, $3, $4)
-        `, [id, p.id, p.cantidad || 1, p.precio || 0]);
+        const pIdNum = parseInt(p.id, 10);
+        if (!isNaN(pIdNum) && pIdNum > 0) {
+          await client.query(`
+            INSERT INTO DetalleMantenimientoProductos (idMantenimiento, idProductos, cantidad, precio)
+            VALUES ($1, $2, $3, $4)
+          `, [id, pIdNum, p.cantidad || 1, p.precio || 0]);
 
-        await client.query(`
-          UPDATE Productos SET stock_actual = stock_actual - $1 WHERE idProductos = $2
-        `, [p.cantidad || 1, p.id]);
+          await client.query(`
+            UPDATE Productos SET stock_actual = stock_actual - $1 WHERE idProductos = $2
+          `, [p.cantidad || 1, pIdNum]);
+        }
       }
     }
 

@@ -346,21 +346,19 @@ export default function RemisionTecnico() {
         { id: 'suspension', item: 'Amortiguadores y bujes de suspensión', estado: 'Pendiente', nota: '' },
       ];
 
-      // Filtrar servicios validando si son IDs numéricos del backend o custom
       const serviciosPayload = trabajos.map(t => ({
-        id: typeof t.id === 'number' ? t.id : null,
+        id: t.id,
         nombre: t.nombre,
         precio: t.precio,
         descripcion: t.descripcion
-      })).filter(s => s.id !== null);
+      }));
 
-      // Filtrar productos validando si son IDs numéricos del backend o custom
       const productosPayload = refacciones.map(r => ({
-        id: typeof r.id === 'number' ? r.id : null,
+        id: r.id,
         nombre: r.nombre,
         cantidad: r.cantidad,
         precio: r.precio_unitario
-      })).filter(p => p.id !== null);
+      }));
 
       const payload = {
         idVehiculos: Number(idVehiculo),
@@ -368,7 +366,7 @@ export default function RemisionTecnico() {
         kilometraje: kilometraje || '0',
         estado: 'Pendiente de Aprobación', // Estado inicial para que el Admin apruebe
         fecha: fecha,
-        observaciones: observaciones || 'Remisión generada por técnico en espera de revisión y aprobación administrativa.',
+        observaciones: observaciones || 'Orden de servicio generada por técnico en espera de revisión y aprobación administrativa.',
         costo_final: totalRemision,
         checklist: checklistPredeterminado,
         servicios: serviciosPayload,
@@ -382,13 +380,13 @@ export default function RemisionTecnico() {
         await updateCita(selectedCitaId, { estado: 'Atendida' });
       }
 
-      toast.success('¡Nota de Remisión emitida exitosamente! Ha sido enviada al área de Mantenimiento para aprobación del Administrador.');
+      toast.success('¡Orden de Servicio emitida exitosamente! Ha sido enviada al área de Mantenimiento para aprobación del Administrador.');
       
       // Limpiar formulario
       resetForm();
     } catch (err) {
-      console.error('Error al emitir remisión:', err);
-      toast.error(err.message || 'Error al emitir la Nota de Remisión');
+      console.error('Error al emitir orden de servicio:', err);
+      toast.error(err.message || 'Error al emitir la Orden de Servicio');
     } finally {
       setSubmitting(false);
     }
@@ -418,7 +416,7 @@ export default function RemisionTecnico() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">Nota de Remisión</h2>
+                <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">Orden de Servicio</h2>
                 <span className="bg-amber-100 text-amber-800 text-xs font-bold px-3 py-1 rounded-full border border-amber-200">
                   Área de Técnicos & Refaccionaria
                 </span>
@@ -626,7 +624,7 @@ export default function RemisionTecnico() {
               {/* Controles para agregar servicios */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-gray-100">
                 {/* Desde Catálogo */}
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <select
                     value={selectedServicioId}
                     onChange={(e) => setSelectedServicioId(e.target.value)}
@@ -642,14 +640,14 @@ export default function RemisionTecnico() {
                   <button
                     type="button"
                     onClick={agregarServicioCatalogo}
-                    className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition shadow-sm whitespace-nowrap"
+                    className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition shadow-sm whitespace-nowrap justify-center flex items-center"
                   >
                     + Agregar
                   </button>
                 </div>
 
                 {/* Personalizado */}
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     type="text"
                     placeholder="Nombre de servicio no registrado..."
@@ -657,20 +655,22 @@ export default function RemisionTecnico() {
                     onChange={(e) => setServicioCustom({ ...servicioCustom, nombre: e.target.value })}
                     className="flex-1 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                  <input
-                    type="number"
-                    placeholder="$ Costo"
-                    value={servicioCustom.precio}
-                    onChange={(e) => setServicioCustom({ ...servicioCustom, precio: e.target.value })}
-                    className="w-24 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={agregarServicioCustom}
-                    className="px-4 py-2.5 bg-gray-800 hover:bg-black text-white font-bold text-xs rounded-xl transition whitespace-nowrap"
-                  >
-                    + Adicionar
-                  </button>
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      placeholder="$ Costo"
+                      value={servicioCustom.precio}
+                      onChange={(e) => setServicioCustom({ ...servicioCustom, precio: e.target.value })}
+                      className="w-full sm:w-24 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={agregarServicioCustom}
+                      className="px-4 py-2.5 bg-gray-800 hover:bg-black text-white font-bold text-xs rounded-xl transition whitespace-nowrap shrink-0 flex items-center justify-center"
+                    >
+                      + Adicionar
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -745,7 +745,7 @@ export default function RemisionTecnico() {
               {/* Controles para agregar refacciones */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-gray-100">
                 {/* Desde inventario */}
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <select
                     value={selectedProductoId}
                     onChange={(e) => setSelectedProductoId(e.target.value)}
@@ -758,25 +758,27 @@ export default function RemisionTecnico() {
                       </option>
                     ))}
                   </select>
-                  <input
-                    type="number"
-                    min="1"
-                    placeholder="Cant."
-                    value={cantProducto}
-                    onChange={(e) => setCantProducto(e.target.value)}
-                    className="w-16 px-2 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs text-center font-bold outline-none focus:ring-2 focus:ring-amber-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={agregarRefaccionCatalogo}
-                    className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl transition shadow-sm whitespace-nowrap"
-                  >
-                    + Pedir Pieza
-                  </button>
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="Cant."
+                      value={cantProducto}
+                      onChange={(e) => setCantProducto(e.target.value)}
+                      className="w-20 sm:w-16 px-2 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs text-center font-bold outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={agregarRefaccionCatalogo}
+                      className="flex-1 sm:flex-none px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl transition shadow-sm whitespace-nowrap justify-center flex items-center"
+                    >
+                      + Pedir Pieza
+                    </button>
+                  </div>
                 </div>
 
                 {/* Especial / No inventariada */}
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     type="text"
                     placeholder="Nombre de refacción especial..."
@@ -784,20 +786,22 @@ export default function RemisionTecnico() {
                     onChange={(e) => setProductoCustom({ ...productoCustom, nombre: e.target.value })}
                     className="flex-1 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-amber-500"
                   />
-                  <input
-                    type="number"
-                    placeholder="$ Precio U."
-                    value={productoCustom.precio}
-                    onChange={(e) => setProductoCustom({ ...productoCustom, precio: e.target.value })}
-                    className="w-24 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-amber-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={agregarRefaccionCustom}
-                    className="px-4 py-2.5 bg-gray-800 hover:bg-black text-white font-bold text-xs rounded-xl transition whitespace-nowrap"
-                  >
-                    + Pedir Especial
-                  </button>
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      placeholder="$ Precio U."
+                      value={productoCustom.precio}
+                      onChange={(e) => setProductoCustom({ ...productoCustom, precio: e.target.value })}
+                      className="w-full sm:w-24 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={agregarRefaccionCustom}
+                      className="px-4 py-2.5 bg-gray-800 hover:bg-black text-white font-bold text-xs rounded-xl transition whitespace-nowrap shrink-0 flex items-center justify-center"
+                    >
+                      + Pedir Especial
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -825,7 +829,7 @@ export default function RemisionTecnico() {
 
                 {/* Tarjeta de Total */}
                 <div className="bg-emerald-950 text-white p-6 rounded-2xl shadow-lg border border-emerald-800 space-y-2 text-right">
-                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-300 block">Total de la Remisión</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-300 block">Total de la Orden de Servicio</span>
                   <div className="text-3xl font-black text-white">
                     ${totalRemision.toLocaleString()} MXN
                   </div>
@@ -843,10 +847,10 @@ export default function RemisionTecnico() {
                   className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-2xl font-bold text-base transition shadow-xl shadow-emerald-600/20 flex items-center gap-3 disabled:opacity-50"
                 >
                   {submitting ? (
-                    <span>Emitiendo Remisión...</span>
+                    <span>Emitiendo Orden de Servicio...</span>
                   ) : (
                     <>
-                      <span>📄 Emitir Remisión & Enviar a Mantenimiento</span>
+                      <span>📄 Emitir Orden de Servicio & Enviar a Mantenimiento</span>
                       <span className="text-xl">→</span>
                     </>
                   )}

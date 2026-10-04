@@ -444,13 +444,13 @@ export default function AdminMantenimiento() {
     return m.estado === filtroEstado;
   });
 
-  const aprobarRemision = async (mId, nuevoEstado = 'En proceso') => {
+  const aprobarOrdenServicio = async (mId, nuevoEstado = 'En proceso') => {
     try {
       await updateMantenimientoEstado(mId, nuevoEstado);
       await loadData();
-      toast.success(nuevoEstado === 'Completado' ? 'Remisión aprobada y completada' : 'Remisión aprobada y puesta en proceso');
+      toast.success(nuevoEstado === 'Completado' ? 'Orden de Servicio aprobada y completada' : 'Orden de Servicio aprobada y puesta en proceso');
     } catch (err) {
-      toast.error(err.message, 'Error al aprobar remisión');
+      toast.error(err.message, 'Error al aprobar Orden de Servicio');
     }
   };
 
@@ -460,15 +460,8 @@ export default function AdminMantenimiento() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
             <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight mb-1">Centro de Mantenimiento & Inspección</h2>
-            <p className="text-gray-500 text-sm">Gestiona la hoja de requisitos en tiempo real y aprueba remisiones enviadas por técnicos</p>
+            <p className="text-gray-500 text-sm">Gestiona la hoja de requisitos en tiempo real y aprueba órdenes de servicio enviadas por técnicos</p>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowModal(true)}
-            className="bg-[#1a56db] text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-blue-700 transition flex items-center gap-2 shadow-lg shadow-blue-500/20"
-          >
-            <span className="text-xl leading-none">+</span> Nueva Orden
-          </button>
         </div>
 
         {/* Muestras de KPIs */}
@@ -479,7 +472,7 @@ export default function AdminMantenimiento() {
           </div>
           <div className="bg-white p-6 rounded-2xl border border-gray-200/80 shadow-sm hover:shadow-md transition">
             <span className="text-3xl font-extrabold text-amber-600">{totalPendientes}</span>
-            <span className="text-sm font-medium text-gray-500 block mt-1">Remisiones por Aprobar</span>
+            <span className="text-sm font-medium text-gray-500 block mt-1">Órdenes por Aprobar</span>
           </div>
           <div className="bg-white p-6 rounded-2xl border border-gray-200/80 shadow-sm hover:shadow-md transition">
             <span className="text-3xl font-extrabold text-indigo-600">{totalEnProceso}</span>
@@ -505,7 +498,7 @@ export default function AdminMantenimiento() {
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              {st === 'Pendiente de Aprobación' ? `📝 Remisiones por Aprobar (${totalPendientes})` : st}
+              {st === 'Pendiente de Aprobación' ? `📝 Órdenes por Aprobar (${totalPendientes})` : st}
             </button>
           ))}
         </div>
@@ -516,7 +509,7 @@ export default function AdminMantenimiento() {
           <div className="space-y-4">
             {mantenimientosFiltrados.length === 0 ? (
               <div className="text-center py-12 bg-white rounded-2xl border border-gray-200/80 text-gray-400 font-medium">
-                No hay mantenimientos ni remisiones con el filtro seleccionado.
+                No hay mantenimientos ni órdenes de servicio con el filtro seleccionado.
               </div>
             ) : (
               mantenimientosFiltrados.map(m => {
@@ -534,19 +527,19 @@ export default function AdminMantenimiento() {
                       <div className="bg-amber-50 border-b border-amber-200 px-6 py-2.5 flex justify-between items-center text-xs text-amber-900 font-semibold">
                         <span className="flex items-center gap-2">
                           <span className="text-base">📝</span>
-                          <span>Nota de Remisión enviada por el Técnico <strong>{m.tecnico}</strong></span>
+                          <span>Orden de Servicio enviada por el Técnico <strong>{m.tecnico}</strong></span>
                         </span>
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => aprobarRemision(m.id, 'En proceso')}
+                            onClick={() => aprobarOrdenServicio(m.id, 'En proceso')}
                             className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
                           >
-                            ✓ Aprobar Remisión
+                            ✓ Aprobar Orden
                           </button>
                           <button
                             type="button"
-                            onClick={() => aprobarRemision(m.id, 'Completado')}
+                            onClick={() => aprobarOrdenServicio(m.id, 'Completado')}
                             className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
                           >
                             ✓ Aprobar & Completar

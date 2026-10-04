@@ -96,14 +96,14 @@ export default function Reportes() {
       <div className="p-4 md:p-8 max-w-7xl mx-auto">
         
         {/* Header Section */}
-        <div className="flex justify-between items-end mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-1">Reportes</h1>
-            <p className="text-gray-500 text-sm">Análisis general del negocio</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">Reportes</h1>
+            <p className="text-gray-500 text-xs sm:text-sm">Análisis general del negocio</p>
           </div>
           <button 
             onClick={() => window.print()}
-            className="bg-[#1a56db] text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-blue-800 transition-colors flex items-center gap-2 print:hidden"
+            className="w-full sm:w-auto justify-center bg-[#1a56db] text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-blue-800 transition-colors flex items-center gap-2 print:hidden"
           >
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
@@ -113,35 +113,35 @@ export default function Reportes() {
         </div>
 
         {/* Tabs Container */}
-        <div className="bg-white rounded-xl border border-gray-100 p-2 flex gap-2 mb-8 shadow-sm print:hidden">
+        <div className="bg-white rounded-xl border border-gray-100 p-1.5 flex flex-wrap sm:flex-nowrap gap-1.5 mb-8 shadow-sm overflow-x-auto print:hidden">
           <button 
             onClick={() => setActiveReportTab('ventas')}
-            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-sm transition-colors ${activeReportTab === 'ventas' ? 'bg-[#1a56db] text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
+            className={`flex-1 sm:flex-none justify-center items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-semibold text-xs sm:text-sm transition-colors flex ${activeReportTab === 'ventas' ? 'bg-[#1a56db] text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 sm:w-5 sm:h-5 shrink-0">
               <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />
             </svg>
-            Reporte de Ventas
+            <span>Reporte de Ventas</span>
           </button>
           
           <button 
             onClick={() => setActiveReportTab('servicios')}
-            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-sm transition-colors ${activeReportTab === 'servicios' ? 'bg-[#1a56db] text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
+            className={`flex-1 sm:flex-none justify-center items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-semibold text-xs sm:text-sm transition-colors flex ${activeReportTab === 'servicios' ? 'bg-[#1a56db] text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 sm:w-5 sm:h-5 shrink-0">
               <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.492-3.053c.217-.266.154-.657-.14-.803l-1.071-.536c-.286-.143-.604-.045-.769.215l-1.574 2.443-1.421-1.421 2.443-1.574c.26-.165.358-.483.215-.769l-.536-1.071c-.146-.294-.537-.357-.803-.14l-3.053 2.492M11.42 15.17l-3.218 3.218A2.652 2.652 0 012.25 15.17l3.218-3.218" />
             </svg>
-            Reporte de Servicios
+            <span>Reporte de Servicios</span>
           </button>
           
           <button 
             onClick={() => setActiveReportTab('productos')}
-            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-sm transition-colors ${activeReportTab === 'productos' ? 'bg-[#1a56db] text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
+            className={`flex-1 sm:flex-none justify-center items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-semibold text-xs sm:text-sm transition-colors flex ${activeReportTab === 'productos' ? 'bg-[#1a56db] text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 sm:w-5 sm:h-5 shrink-0">
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
             </svg>
-            Reporte de Productos
+            <span>Reporte de Productos</span>
           </button>
         </div>
 
