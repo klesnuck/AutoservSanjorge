@@ -21,6 +21,7 @@ import AdminServicios from "./pages/AdminServicios";
 import AdminMantenimiento from "./pages/AdminMantenimiento";
 import Ventas from "./pages/Ventas";
 import AdminVehiculos from "./pages/AdminVehiculos";
+import RemisionTecnico from "./pages/RemisionTecnico";
 import logo from "./assets/logg.png";
 import "./styles/barra.scss";
 
@@ -40,7 +41,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-100 text-center">
- 
+
       {showMainNav && (
         <nav className="bg-blue-950 text-white px-4 py-2 flex flex-col md:flex-row gap-4 items-center text-lg justify-between">
           <Link to="/" className="flex items-center gap-3 w-full md:w-auto justify-center md:justify-start">
@@ -80,6 +81,7 @@ function App() {
         <Route path="/admin/reportes" element={<AdminRoute><Reportes /></AdminRoute>} />
         <Route path="/admin/vehiculos" element={<AdminRoute><Vehiculos /></AdminRoute>} />
         <Route path="/admin/mantenimiento" element={<AdminRoute><AdminMantenimiento /></AdminRoute>} />
+        <Route path="/admin/remision" element={<AdminRoute><RemisionTecnico /></AdminRoute>} />
         <Route path="/admin/servicios" element={<AdminRoute><AdminServicios /></AdminRoute>} />
         <Route path="/admin/ventas" element={<AdminRoute><Ventas /></AdminRoute>} />
         <Route path="/admin/catalogo-vehiculos" element={<AdminRoute><AdminVehiculos /></AdminRoute>} />

@@ -432,9 +432,27 @@ export default function AdminMantenimiento() {
     }
   };
 
+  const [filtroEstado, setFiltroEstado] = useState('Todos');
+
+  const totalPendientes = mantenimientos.filter(m => m.estado === 'Pendiente de Aprobación').length;
   const totalCompletados = mantenimientos.filter(m => m.estado === 'Completado').length;
   const totalEnProceso = mantenimientos.filter(m => m.estado === 'En proceso').length;
   const ingresosTotales = mantenimientos.reduce((acc, m) => acc + Number(m.costo_final || 0), 0);
+
+  const mantenimientosFiltrados = mantenimientos.filter(m => {
+    if (filtroEstado === 'Todos') return true;
+    return m.estado === filtroEstado;
+  });
+
+  const aprobarRemision = async (mId, nuevoEstado = 'En proceso') => {
+    try {
+      await updateMantenimientoEstado(mId, nuevoEstado);
+      await loadData();
+      toast.success(nuevoEstado === 'Completado' ? 'Remisión aprobada y completada' : 'Remisión aprobada y puesta en proceso');
+    } catch (err) {
+      toast.error(err.message, 'Error al aprobar remisión');
+    }
+  };
 
   return (
     <AdminLayout activeTab="mantenimiento">
@@ -442,7 +460,7 @@ export default function AdminMantenimiento() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
             <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight mb-1">Centro de Mantenimiento & Inspección</h2>
-            <p className="text-gray-500 text-sm">Gestiona la hoja de requisitos en tiempo real para técnicos y vehículos</p>
+            <p className="text-gray-500 text-sm">Gestiona la hoja de requisitos en tiempo real y aprueba remisiones enviadas por técnicos</p>
           </div>
           <button
             type="button"
@@ -454,75 +472,132 @@ export default function AdminMantenimiento() {
         </div>
 
         {/* Muestras de KPIs */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white p-6 rounded-2xl border border-gray-200/80 shadow-sm hover:shadow-md transition">
             <span className="text-3xl font-extrabold text-blue-600">{mantenimientos.length}</span>
             <span className="text-sm font-medium text-gray-500 block mt-1">Servicios Registrados</span>
           </div>
           <div className="bg-white p-6 rounded-2xl border border-gray-200/80 shadow-sm hover:shadow-md transition">
-            <span className="text-3xl font-extrabold text-emerald-600">{totalCompletados}</span>
-            <span className="text-sm font-medium text-gray-500 block mt-1">Completados</span>
+            <span className="text-3xl font-extrabold text-amber-600">{totalPendientes}</span>
+            <span className="text-sm font-medium text-gray-500 block mt-1">Remisiones por Aprobar</span>
           </div>
           <div className="bg-white p-6 rounded-2xl border border-gray-200/80 shadow-sm hover:shadow-md transition">
-            <span className="text-3xl font-extrabold text-amber-500">{totalEnProceso}</span>
+            <span className="text-3xl font-extrabold text-indigo-600">{totalEnProceso}</span>
             <span className="text-sm font-medium text-gray-500 block mt-1">En Proceso (Live)</span>
           </div>
           <div className="bg-white p-6 rounded-2xl border border-gray-200/80 shadow-sm hover:shadow-md transition">
-            <span className="text-3xl font-extrabold text-indigo-600">${ingresosTotales.toLocaleString()}</span>
-            <span className="text-sm font-medium text-gray-500 block mt-1">Ingresos Totales</span>
+            <span className="text-3xl font-extrabold text-emerald-600">{totalCompletados}</span>
+            <span className="text-sm font-medium text-gray-500 block mt-1">Completados</span>
           </div>
+        </div>
+
+        {/* Barra de Filtros */}
+        <div className="bg-white p-3 rounded-2xl border border-gray-200/80 shadow-sm mb-6 flex flex-wrap gap-2 items-center">
+          <span className="text-xs font-bold text-gray-500 uppercase px-3">Filtrar por:</span>
+          {['Todos', 'Pendiente de Aprobación', 'En proceso', 'Completado'].map((st) => (
+            <button
+              key={st}
+              type="button"
+              onClick={() => setFiltroEstado(st)}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+                filtroEstado === st
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {st === 'Pendiente de Aprobación' ? `📝 Remisiones por Aprobar (${totalPendientes})` : st}
+            </button>
+          ))}
         </div>
 
         {loading ? (
           <div className="text-center py-16 text-gray-400 font-medium">Cargando mantenimientos e inspecciones...</div>
         ) : (
           <div className="space-y-4">
-            {mantenimientos.map(m => {
-              const servicioBaseName = m.servicios && m.servicios.length > 0 ? m.servicios[0].nombre : 'Mantenimiento General';
-              const partesArray = m.productos ? m.productos.map(p => `${p.nombre} x${p.cantidad}`) : [];
-              const totalItemsChecklist = m.checklist ? m.checklist.length : 8;
-              const itemsListos = m.checklist ? m.checklist.filter(c => c.estado === 'OK' || c.estado === 'Cambiado').length : 0;
-              const porcentajeProgreso = Math.round((itemsListos / totalItemsChecklist) * 100);
+            {mantenimientosFiltrados.length === 0 ? (
+              <div className="text-center py-12 bg-white rounded-2xl border border-gray-200/80 text-gray-400 font-medium">
+                No hay mantenimientos ni remisiones con el filtro seleccionado.
+              </div>
+            ) : (
+              mantenimientosFiltrados.map(m => {
+                const servicioBaseName = m.servicios && m.servicios.length > 0 ? m.servicios[0].nombre : 'Mantenimiento General';
+                const partesArray = m.productos ? m.productos.map(p => `${p.nombre} x${p.cantidad}`) : [];
+                const totalItemsChecklist = m.checklist ? m.checklist.length : 8;
+                const itemsListos = m.checklist ? m.checklist.filter(c => c.estado === 'OK' || c.estado === 'Cambiado').length : 0;
+                const porcentajeProgreso = Math.round((itemsListos / totalItemsChecklist) * 100);
+                const esPendienteRemision = m.estado === 'Pendiente de Aprobación';
 
-              return (
-                <div key={m.id} className="bg-white rounded-2xl border border-gray-200/80 shadow-sm hover:shadow-md transition overflow-hidden text-left">
-                  <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div className="flex gap-4 items-center">
-                      <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0 font-bold">
-                        🚗
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-3">
-                          <h3 className="text-lg font-bold text-gray-900">{servicioBaseName}</h3>
-                          <span className={`px-3 py-0.5 rounded-full text-xs font-bold ${m.estado === 'Completado' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                            {m.estado}
-                          </span>
+                return (
+                  <div key={m.id} className={`bg-white rounded-2xl border transition overflow-hidden text-left ${esPendienteRemision ? 'border-amber-300 shadow-amber-100/50 shadow-md ring-1 ring-amber-300' : 'border-gray-200/80 shadow-sm hover:shadow-md'}`}>
+                    
+                    {esPendienteRemision && (
+                      <div className="bg-amber-50 border-b border-amber-200 px-6 py-2.5 flex justify-between items-center text-xs text-amber-900 font-semibold">
+                        <span className="flex items-center gap-2">
+                          <span className="text-base">📝</span>
+                          <span>Nota de Remisión enviada por el Técnico <strong>{m.tecnico}</strong></span>
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => aprobarRemision(m.id, 'En proceso')}
+                            className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
+                          >
+                            ✓ Aprobar Remisión
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => aprobarRemision(m.id, 'Completado')}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
+                          >
+                            ✓ Aprobar & Completar
+                          </button>
                         </div>
-                        <div className="text-sm text-gray-500 flex flex-wrap items-center gap-3 mt-1">
-                          <span className="font-semibold text-gray-700">{m.vehiculo}</span>
-                          <span>•</span>
-                          <span>Técnico: <strong className="text-gray-800">{m.tecnico || 'Sin asignar'}</strong></span>
-                          <span>•</span>
-                          <span>{new Date(m.fecha).toLocaleDateString()}</span>
+                      </div>
+                    )}
+
+                    <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                      <div className="flex gap-4 items-center">
+                        <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0 font-bold">
+                          🚗
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-3">
+                            <h3 className="text-lg font-bold text-gray-900">{servicioBaseName}</h3>
+                            <span className={`px-3 py-0.5 rounded-full text-xs font-bold ${
+                              m.estado === 'Completado'
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : m.estado === 'Pendiente de Aprobación'
+                                ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                                : 'bg-blue-100 text-blue-700'
+                            }`}>
+                              {m.estado}
+                            </span>
+                          </div>
+                          <div className="text-sm text-gray-500 flex flex-wrap items-center gap-3 mt-1">
+                            <span className="font-semibold text-gray-700">{m.vehiculo}</span>
+                            <span>•</span>
+                            <span>Técnico: <strong className="text-gray-800">{m.tecnico || 'Sin asignar'}</strong></span>
+                            <span>•</span>
+                            <span>{new Date(m.fecha).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
+                        <button
+                          type="button"
+                          onClick={() => abrirHojaTrabajo(m)}
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center gap-2 shadow-sm"
+                        >
+                          <span>📋 Hoja de Requisitos (Tiempo Real)</span>
+                          <span className="bg-indigo-800/60 px-2 py-0.5 rounded-lg text-[10px] font-mono">{porcentajeProgreso}%</span>
+                        </button>
+
+                        <div className="text-right">
+                          <div className="text-xl font-black text-gray-900">${Number(m.costo_final || 0).toLocaleString()}</div>
                         </div>
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
-                      <button
-                        type="button"
-                        onClick={() => abrirHojaTrabajo(m)}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center gap-2 shadow-sm"
-                      >
-                        <span>📋 Hoja de Requisitos (Tiempo Real)</span>
-                        <span className="bg-indigo-800/60 px-2 py-0.5 rounded-lg text-[10px] font-mono">{porcentajeProgreso}%</span>
-                      </button>
-
-                      <div className="text-right">
-                        <div className="text-xl font-black text-gray-900">${Number(m.costo_final || 0).toLocaleString()}</div>
-                      </div>
-                    </div>
-                  </div>
 
                   <div className="p-6 bg-slate-50/50 grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
@@ -557,7 +632,7 @@ export default function AdminMantenimiento() {
                   </div>
                 </div>
               );
-            })}
+            }))}
           </div>
         )}
       </div>
@@ -599,6 +674,7 @@ export default function AdminMantenimiento() {
                   onChange={(e) => setEstadoHoja(e.target.value)}
                   className="px-3 py-1 bg-white border border-indigo-200 rounded-lg text-xs font-bold text-indigo-900 outline-none focus:ring-2 focus:ring-indigo-500"
                 >
+                  <option value="Pendiente de Aprobación">Pendiente de Aprobación</option>
                   <option value="En proceso">En proceso</option>
                   <option value="Completado">Completado</option>
                 </select>
