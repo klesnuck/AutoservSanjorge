@@ -152,4 +152,45 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// GET /me (Verificación de token y sesión activa)
+// ---------------------------------------------------------------------------
+
+const { authenticateToken } = require('../middleware/auth');
+
+/**
+ * GET /api/auth/me
+ * Verifica el JWT y devuelve los datos actualizados del usuario autenticado.
+ */
+router.get('/me', authenticateToken, async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT u.idUsuarios, u.email, u.nombre, u.telefono, r.nombre AS rolename, r.permisos
+       FROM Usuarios u
+       JOIN Roles r ON u.${userRoleIdColumn} = r.idRoles
+       WHERE u.idUsuarios = $1`,
+      [req.user.id]
+    );
+
+    if (!rows.length) {
+      return res.status(401).json({ error: 'Usuario no encontrado' });
+    }
+
+    const user = rows[0];
+    const permissions = Array.isArray(user.permisos) ? user.permisos : JSON.parse(user.permisos || '[]');
+
+    res.json({
+      id: user.idusuarios,
+      email: user.email,
+      name: user.nombre,
+      phone: user.telefono || '',
+      role: user.rolename,
+      permissions,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al verificar sesión' });
+  }
+});
+
 module.exports = router;

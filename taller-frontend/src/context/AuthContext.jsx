@@ -85,13 +85,52 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const savedCurrentUser = JSON.parse(localStorage.getItem('currentUser'));
     const savedToken = localStorage.getItem('token');
-    if (savedCurrentUser && savedToken) {
-      setCurrentUser(savedCurrentUser);
-      setToken(savedToken);
-      setIsAuthenticated(true);
-    }
 
     const initialize = async () => {
+      if (savedToken) {
+        try {
+          const response = await fetch(`${API_BASE}/api/auth/me`, {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${savedToken}`,
+            },
+          });
+          if (response.ok) {
+            const userData = await response.json();
+            setCurrentUser(userData);
+            setToken(savedToken);
+            setIsAuthenticated(true);
+            localStorage.setItem('currentUser', JSON.stringify(userData));
+          } else {
+            // Token expirado o inválido: borrar sesión y forzar login
+            setIsAuthenticated(false);
+            setCurrentUser(null);
+            setToken(null);
+            localStorage.removeItem('currentUser');
+            localStorage.removeItem('token');
+          }
+        } catch {
+          // En caso de error de red puntual, conservar credenciales locales si existen
+          if (savedCurrentUser && savedToken) {
+            setCurrentUser(savedCurrentUser);
+            setToken(savedToken);
+            setIsAuthenticated(true);
+          } else {
+            setIsAuthenticated(false);
+            setCurrentUser(null);
+            setToken(null);
+            localStorage.removeItem('currentUser');
+            localStorage.removeItem('token');
+          }
+        }
+      } else {
+        setIsAuthenticated(false);
+        setCurrentUser(null);
+        setToken(null);
+        localStorage.removeItem('currentUser');
+        localStorage.removeItem('token');
+      }
+
       await Promise.all([fetchRoles(), fetchUsers()]);
       setLoading(false);
     };
