@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import logo from '../assets/logg.png';
+import logo from '../assets/logo_final.png';
 import { fetchMantenimientos } from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
 

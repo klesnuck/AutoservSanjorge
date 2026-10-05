@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '../layouts/AdminLayout';
-import logo from '../assets/logg.png';
+import logo from '../assets/logo_final.png';
 import { fetchReporteVentas, fetchReporteProductos, fetchReporteServicios } from '../utils/api';
 
 const carWatermark = "https://www.transparenttextures.com/patterns/stardust.png";

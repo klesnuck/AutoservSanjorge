@@ -22,7 +22,7 @@ import AdminMantenimiento from "./pages/AdminMantenimiento";
 import Ventas from "./pages/Ventas";
 import AdminVehiculos from "./pages/AdminVehiculos";
 import RemisionTecnico from "./pages/RemisionTecnico";
-import logo from "./assets/logg.png";
+import logo from "./assets/logo_final.png";
 import "./styles/barra.scss";
 
 function App() {
