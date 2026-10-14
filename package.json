@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "cd taller-frontend && npm install && npm run build"
+    "build": "cd taller-frontend && npm install --include=dev && npm run build"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",
