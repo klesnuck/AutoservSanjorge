@@ -44,6 +44,7 @@ const catalogoRoutes = require('./routes/catalogoRoutes');
 const authRoutes = require('./routes/authRoutes');
 const usersRoutes = require('./routes/usersRoutes');
 const rolesRoutes = require('./routes/rolesRoutes');
+const featureFlagRoutes = require('./routes/featureFlagRoutes');
 
 const app = express();
 app.use(cors());
@@ -464,6 +465,46 @@ const initializeDatabase = async () => {
     );
   `);
 
+  // Feature flags (A/B testing)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS FeatureFlag (
+      idFlag SERIAL PRIMARY KEY,
+      clave VARCHAR(100) UNIQUE NOT NULL,
+      descripcion VARCHAR(255),
+      activo BOOLEAN DEFAULT false,
+      variantes JSONB DEFAULT '[{"id":"control","peso":50},{"id":"B","peso":50}]'::jsonb,
+      creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS FeatureFlagEvento (
+      idEvento SERIAL PRIMARY KEY,
+      idFlag INTEGER REFERENCES FeatureFlag(idFlag) ON DELETE CASCADE,
+      variante VARCHAR(50) NOT NULL,
+      tipo VARCHAR(20) NOT NULL,
+      idUsuarios INTEGER REFERENCES Usuarios(idUsuarios) ON DELETE SET NULL,
+      visitorId VARCHAR(64),
+      creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  await pool.query(
+    `INSERT INTO FeatureFlag (clave, descripcion, activo, variantes)
+     VALUES ($1, $2, $3, $4::jsonb)
+     ON CONFLICT (clave) DO NOTHING`,
+    [
+      'cta_cotizar_ab',
+      'A/B del botón principal (CTA) de la página de inicio',
+      false,
+      JSON.stringify([
+        { id: 'control', peso: 50 },
+        { id: 'B', peso: 50 },
+      ]),
+    ]
+  );
+
   for (const role of DEFAULT_ROLES) {
     const { rows: existing } = await pool.query('SELECT idRoles, permisos FROM Roles WHERE nombre = $1', [role.nombre]);
     if (existing.length === 0) {
@@ -594,6 +635,7 @@ app.use('/api/users', usersRoutes);
 app.use('/users', usersRoutes);
 app.use('/api/roles', rolesRoutes);
 app.use('/roles', rolesRoutes);
+app.use('/api/feature-flags', featureFlagRoutes);
 
 const PORT = process.env.PORT || 4000;
 

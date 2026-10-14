@@ -1,11 +1,13 @@
 const BASE_URL = import.meta.env.VITE_API_URL || '';
 
 async function request(path, options = {}) {
+  const { token, ...rest } = options;
   const response = await fetch(`${BASE_URL}${path}`, {
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    ...options,
+    ...rest,
   });
 
   const contentType = response.headers.get('content-type');
@@ -161,3 +163,18 @@ export const updateMantenimientoEstado = (id, estado) => request(`/api/mantenimi
 export const fetchReporteVentas = () => request('/api/reportes/ventas');
 export const fetchReporteProductos = () => request('/api/reportes/productos');
 export const fetchReporteServicios = () => request('/api/reportes/servicios');
+
+// --- Feature Flags (A/B testing) ---
+export const fetchFeatureFlag = (clave) => request(`/api/feature-flags/${clave}`);
+export const trackFeatureFlagEvent = (clave, data) =>
+  request(`/api/feature-flags/${clave}/eventos`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+export const fetchFeatureFlags = (token) => request('/api/feature-flags', { token });
+export const updateFeatureFlag = (clave, data, token) =>
+  request(`/api/feature-flags/${clave}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+    token,
+  });

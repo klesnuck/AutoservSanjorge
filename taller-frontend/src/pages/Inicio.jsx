@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Mapa from "/src/components/mapa.jsx";
+import { useFeatureFlag } from "../hooks/useFeatureFlag";
+import { trackFeatureFlagEvent } from "../utils/api";
 
 function Inicio() {
   const imagenes = [
@@ -15,6 +17,12 @@ function Inicio() {
 
   const [index, setIndex] = useState(0);
   const [fade, setFade] = useState(true);
+
+  const { variant } = useFeatureFlag('cta_cotizar_ab');
+
+  const handleCtaClick = () => {
+    trackFeatureFlagEvent('cta_cotizar_ab', { variante: variant, tipo: 'click' }).catch(() => {});
+  };
 
   //cambiar imagen tiempo
   useEffect(() => {
@@ -55,9 +63,23 @@ function Inicio() {
           <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4">
             Bienvenidos a  Autoservicio <br />San Jorge.
           </h1>
-          <Link to="/servicios" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg inline-block text-center mt-2">
-            Cotizar
-          </Link>
+          {variant === 'B' ? (
+            <Link
+              to="/servicios"
+              onClick={handleCtaClick}
+              className="bg-orange-500 hover:bg-orange-600 text-white font-extrabold py-4 px-10 rounded-xl inline-block text-center mt-3 text-lg md:text-xl shadow-lg transition-transform hover:scale-105"
+            >
+              Agendar cita en 2 minutos
+            </Link>
+          ) : (
+            <Link
+              to="/servicios"
+              onClick={handleCtaClick}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg inline-block text-center mt-2"
+            >
+              Cotizar
+            </Link>
+          )}
         </div>
       </div>
 

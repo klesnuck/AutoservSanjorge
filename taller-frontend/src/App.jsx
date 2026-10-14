@@ -22,6 +22,7 @@ import AdminMantenimiento from "./pages/AdminMantenimiento";
 import Ventas from "./pages/Ventas";
 import AdminVehiculos from "./pages/AdminVehiculos";
 import RemisionTecnico from "./pages/RemisionTecnico";
+import AdminExperimentos from "./pages/AdminExperimentos";
 import logo from "./assets/logo_final.png";
 import "./styles/barra.scss";
 
@@ -85,6 +86,7 @@ function App() {
         <Route path="/admin/servicios" element={<AdminRoute><AdminServicios /></AdminRoute>} />
         <Route path="/admin/ventas" element={<AdminRoute><Ventas /></AdminRoute>} />
         <Route path="/admin/catalogo-vehiculos" element={<AdminRoute><AdminVehiculos /></AdminRoute>} />
+        <Route path="/admin/experimentos" element={<AdminRoute><AdminExperimentos /></AdminRoute>} />
       </Routes>
     </div>
   );

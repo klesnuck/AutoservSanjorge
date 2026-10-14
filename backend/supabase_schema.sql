@@ -221,6 +221,38 @@ CREATE TABLE IF NOT EXISTS Cita (
   estado VARCHAR(50) DEFAULT 'Pendiente'
 );
 
+-- 24. Feature Flags (A/B testing)
+CREATE TABLE IF NOT EXISTS FeatureFlag (
+  idFlag SERIAL PRIMARY KEY,
+  clave VARCHAR(100) UNIQUE NOT NULL,
+  descripcion VARCHAR(255),
+  activo BOOLEAN DEFAULT false,
+  variantes JSONB DEFAULT '[{"id":"control","peso":50},{"id":"B","peso":50}]'::jsonb,
+  creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 25. Eventos de Feature Flags (impresiones y clics)
+CREATE TABLE IF NOT EXISTS FeatureFlagEvento (
+  idEvento SERIAL PRIMARY KEY,
+  idFlag INTEGER REFERENCES FeatureFlag(idFlag) ON DELETE CASCADE,
+  variante VARCHAR(50) NOT NULL,
+  tipo VARCHAR(20) NOT NULL,
+  idUsuarios INTEGER REFERENCES Usuarios(idUsuarios) ON DELETE SET NULL,
+  visitorId VARCHAR(64),
+  creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Flag inicial del experimento A/B del CTA (inactivo por defecto)
+INSERT INTO FeatureFlag (clave, descripcion, activo, variantes)
+VALUES (
+  'cta_cotizar_ab',
+  'A/B del botón principal (CTA) de la página de inicio',
+  false,
+  '[{"id":"control","peso":50},{"id":"B","peso":50}]'::jsonb
+)
+ON CONFLICT (clave) DO NOTHING;
+
 -- ============================================================================
 -- DATOS INICIALES POR DEFECTO (ROLES Y USUARIO ADMINISTRADOR)
 -- ============================================================================
