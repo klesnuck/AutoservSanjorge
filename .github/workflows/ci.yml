@@ -1,0 +1,46 @@
+name: CI-Info
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Commit check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show push info
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+        run: |
+          echo "Event: ${{ github.event_name }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Message: $COMMIT_MSG"
+
+      - name: Create and upload artifact
+        run: |
+          {
+            echo "event=${{ github.event_name }}"
+            echo "branch=${{ github.ref_name }}"
+            echo "sha=${{ github.sha }}"
+            echo "actor=${{ github.actor }}"
+            date -u
+          } > ci-info.txt
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-info
+          path: ci-info.txt
+          retention-days: 7
