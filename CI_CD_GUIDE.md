@@ -7,14 +7,19 @@
 
 ## Trigger y orden de jobs
 
-El archivo `.gitlab-ci.yml` define dos etapas: `test` y `deploy`.
+El archivo `.gitlab-ci.yml` define tres etapas: `build`, `test` y `deploy`.
 
-1. Un merge request dirigido a `main` ejecuta `pruebas`.
+1. Un merge request dirigido a `main` ejecuta `compilar` y luego `pruebas`.
 2. Un push a `main`, incluido el que resulta de completar un merge, ejecuta
-   `pruebas` y luego `deploy_production`.
+   `compilar`, luego `pruebas` y finalmente `deploy_production`.
 3. También puede iniciarse el flujo desde Build > Pipelines > New pipeline
    seleccionando `main`.
 4. Un push a otra rama sin merge request no crea un pipeline con estas reglas.
+
+`compilar` instala las dependencias con `npm ci`, ejecuta `npm run build` del
+frontend y conserva `dist/` como artefacto durante siete días. `pruebas` necesita
+que `compilar` termine correctamente y genera el reporte JUnit. Cada job ejecuta
+su propia instalación porque los runners no comparten `node_modules`.
 
 `needs: pruebas` exige que las pruebas pasen antes de desplegar. El job de
 producción no usa `allow_failure` ni `when: always`. `resource_group: production`
@@ -27,6 +32,13 @@ Dentro de `deploy_production` se ejecutan, en este orden:
 - `vercel pull --environment=production`: descarga ajustes y variables.
 - `vercel build --prod`: construye frontend y funciones según Vercel.
 - `vercel deploy --prebuilt --prod`: publica únicamente si el build terminó bien.
+
+La compilación inicial valida el frontend también en merge requests, sin exponer
+credenciales de producción. El build de Vercel se ejecuta adicionalmente en el job
+de despliegue porque prepara tanto el frontend como las funciones serverless y
+usa los ajustes y variables de producción. El artefacto `dist/` de la etapa
+inicial es evidencia de compilación; no se utiliza como sustituto de
+`.vercel/output` para el despliegue.
 
 Los jobs usan una imagen Linux con Node.js 22. El `package.json` principal también
 selecciona Node.js 22 para Vercel.
@@ -101,8 +113,9 @@ validar las pruebas antes de fusionar.
 ## Evidencias de funcionamiento
 
 1. GitLab > Build > Pipelines: abrir el pipeline del commit publicado.
-2. Verificar `pruebas` en verde y el reporte con los casos ejecutados.
-3. Verificar que `deploy_production` se ejecuta después y termina en verde.
+2. Verificar `compilar` en verde, con su log de build y artefacto `dist/`.
+3. Verificar `pruebas` en verde y el reporte con los casos ejecutados, seguido
+   de `deploy_production` en verde.
 4. Abrir la URL indicada en el log del despliegue y revisar producción.
 5. En Vercel > Deployments, comprobar el nuevo despliegue.
 

@@ -2,6 +2,7 @@ default:
   image: node:22
 
 stages:
+  - build
   - test
   - deploy
 
@@ -12,8 +13,27 @@ workflow:
     - if: '$CI_PIPELINE_SOURCE == "web" && $CI_COMMIT_BRANCH == "main"'
     - when: never
 
+compilar:
+  stage: build
+  script:
+    - npm --prefix taller-frontend ci --include=dev --cache .npm --prefer-offline
+    - npm --prefix taller-frontend run build
+  cache:
+    key:
+      files:
+        - taller-frontend/package-lock.json
+    paths:
+      - .npm/
+  artifacts:
+    paths:
+      - taller-frontend/dist/
+    expire_in: 7 days
+
 pruebas:
   stage: test
+  needs:
+    - job: compilar
+      artifacts: false
   script:
     - npm --prefix taller-frontend ci --include=dev --cache .npm --prefer-offline
     - npm --prefix taller-frontend run test:ci
