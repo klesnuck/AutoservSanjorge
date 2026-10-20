@@ -2,8 +2,12 @@
   "name": "autoservicio-san-jorge",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
-    "build": "cd taller-frontend && npm install && npm run build"
+    "build": "npm --prefix taller-frontend ci --include=dev && npm --prefix taller-frontend run build",
+    "test": "npm --prefix taller-frontend test"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",

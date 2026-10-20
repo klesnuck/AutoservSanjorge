@@ -1,0 +1,55 @@
+default:
+  image: node:22
+
+stages:
+  - test
+  - deploy
+
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "web" && $CI_COMMIT_BRANCH == "main"'
+    - when: never
+
+pruebas:
+  stage: test
+  script:
+    - npm --prefix taller-frontend ci --include=dev --cache .npm --prefer-offline
+    - npm --prefix taller-frontend run test:ci
+  cache:
+    key:
+      files:
+        - taller-frontend/package-lock.json
+    paths:
+      - .npm/
+  artifacts:
+    when: always
+    reports:
+      junit: taller-frontend/test-results/junit.xml
+    paths:
+      - taller-frontend/test-results/junit.xml
+    expire_in: 7 days
+
+deploy_production:
+  stage: deploy
+  needs:
+    - job: pruebas
+      artifacts: false
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web")'
+  resource_group: production
+  environment:
+    name: production
+  script:
+    - |
+      for variable in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID; do
+        if [ -z "${!variable}" ]; then
+          echo "Falta $variable. Revisa las variables CI/CD y la protección de main."
+          exit 1
+        fi
+      done
+    - npm install --global vercel@latest
+    - vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+    - vercel build --prod --token="$VERCEL_TOKEN"
+    - vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN" -m gitlabDeployment="1" -m gitlabCommitRef="$CI_COMMIT_BRANCH" -m gitlabCommitSha="$CI_COMMIT_SHA"
