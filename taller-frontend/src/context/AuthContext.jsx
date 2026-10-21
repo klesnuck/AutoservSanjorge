@@ -150,6 +150,20 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: data.error || 'Credenciales inválidas' };
       }
       
+      // Si requiere segundo factor (MFA / 2FA)
+      if (data.mfaRequired) {
+        return {
+          success: true,
+          mfaRequired: true,
+          tempToken: data.tempToken,
+          email: data.email,
+          emailSent: data.emailSent,
+          emailPreviewUrl: data.emailPreviewUrl,
+          otpDev: data.otpDev,
+          message: data.message,
+        };
+      }
+
       const { token: userToken, ...userWithoutToken } = data;
       setCurrentUser(userWithoutToken);
       setToken(userToken);
@@ -163,6 +177,57 @@ export const AuthProvider = ({ children }) => {
       return { success: true, user: userWithoutToken };
     } catch {
       return { success: false, error: 'No fue posible iniciar sesión' };
+    }
+  };
+
+  const verifyMfa = async (tempToken, code) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/verify-mfa`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tempToken, code }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        return { success: false, error: data.error || 'Código de verificación incorrecto' };
+      }
+
+      const { token: userToken, ...userWithoutToken } = data;
+      setCurrentUser(userWithoutToken);
+      setToken(userToken);
+      setIsAuthenticated(true);
+
+      localStorage.setItem('currentUser', JSON.stringify(userWithoutToken));
+      if (userToken) {
+        localStorage.setItem('token', userToken);
+      }
+
+      return { success: true, user: userWithoutToken };
+    } catch {
+      return { success: false, error: 'Error al verificar el código de seguridad' };
+    }
+  };
+
+  const resendMfa = async (tempToken) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/resend-mfa`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tempToken }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        return { success: false, error: data.error || 'Error al reenviar código' };
+      }
+      return {
+        success: true,
+        otpDev: data.otpDev,
+        emailSent: data.emailSent,
+        emailPreviewUrl: data.emailPreviewUrl,
+        message: data.message,
+      };
+    } catch {
+      return { success: false, error: 'Error de conexión al solicitar nuevo código' };
     }
   };
 
@@ -299,6 +364,8 @@ export const AuthProvider = ({ children }) => {
         currentUser,
         token,
         login,
+        verifyMfa,
+        resendMfa,
         register,
         logout,
         roles,
