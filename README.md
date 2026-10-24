@@ -4,7 +4,7 @@ Sistema web integral para la administración operativa y financiera del taller m
 
 ---
 
-##  Características Principales
+##  Módulos Principales del Sistema
 
 * **Autenticación y Roles (RBAC):** Accesos segmentados para Administrador, Técnico y Cliente.
 * **Registro de Clientes y Vehículos:** Mapeo de clientes con múltiples vehículos vinculados.
@@ -14,5 +14,3 @@ Sistema web integral para la administración operativa y financiera del taller m
 * **Historial Técnico:** Bitácora detallada de reparaciones y mantenimientos por vehículo.
 * **Notificaciones:** Avisos automáticos de estatus de reparación al cliente.
 * **Reportes y Analítica:** Estadísticas operativas y financieras exportables.
-
----
