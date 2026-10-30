@@ -30,7 +30,7 @@ services:
       # endpoint /api/health ejecuta SELECT NOW() a través del pool de pg;
       # por lo tanto, dbStatus === "connected" también verifica que la base
       # de datos sea accesible.
-      test:z
+      test:
         - CMD
         - node
         - "-e"
