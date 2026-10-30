@@ -4,6 +4,7 @@ default:
 stages:
   - build
   - test
+  - package
   - deploy
 
 workflow:
@@ -51,25 +52,79 @@ pruebas:
       - taller-frontend/test-results/junit.xml
     expire_in: 7 days
 
-deploy_production:
-  stage: deploy
+.docker_job:
+  image: docker:27.4.1-cli
+  services:
+    - name: docker:27.4.1-dind
+      alias: docker
+  tags:
+    - docker-build
+  variables:
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_TLS_CERTDIR: /certs
+    DOCKER_TLS_VERIFY: "1"
+    DOCKER_CERT_PATH: /certs/client
+
+validar_imagenes:
+  extends: .docker_job
+  stage: package
+  needs:
+    - job: pruebas
+      artifacts: false
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+  script:
+    - docker build --pull --target backend -t autoservsanjorge-backend:validate .
+    - docker build --pull --target frontend -t autoservsanjorge-frontend:validate .
+
+publicar_imagenes:
+  extends: .docker_job
+  stage: package
   needs:
     - job: pruebas
       artifacts: false
   rules:
     - if: '$CI_COMMIT_BRANCH == "main" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web")'
-  resource_group: production
-  environment:
-    name: production
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" --username "$CI_REGISTRY_USER" --password-stdin
   script:
-    - |
-      for variable in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID; do
-        if [ -z "${!variable}" ]; then
-          echo "Falta $variable. Revisa las variables CI/CD y la protección de main."
-          exit 1
-        fi
-      done
-    - npm install --global vercel@latest
-    - vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
-    - vercel build --prod --token="$VERCEL_TOKEN"
-    - vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN" -m gitlabDeployment="1" -m gitlabCommitRef="$CI_COMMIT_BRANCH" -m gitlabCommitSha="$CI_COMMIT_SHA"
+    - docker build --pull --target backend -t "$CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHA" .
+    - docker build --pull --target frontend -t "$CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHA" .
+    - docker push "$CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHA"
+    - docker push "$CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHA"
+  after_script:
+    - docker logout "$CI_REGISTRY"
+
+deploy_staging:
+  stage: deploy
+  needs:
+    - job: publicar_imagenes
+      artifacts: false
+  tags:
+    - staging
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web")'
+      when: manual
+  resource_group: staging
+  environment:
+    name: staging
+    deployment_tier: staging
+    url: "http://${STAGING_HOST}:${FRONTEND_PORT}"
+  variables:
+    DEPLOY_DIR: /opt/autoservsanjorge
+  script:
+    - test -n "$STAGING_ENV_FILE"
+    - test -n "$STAGING_HOST"
+    - test -n "$FRONTEND_PORT"
+    - install -m 644 compose.yml "$DEPLOY_DIR/compose.yml"
+    - install -m 600 "$STAGING_ENV_FILE" "$DEPLOY_DIR/.env"
+    - printf '\nBACKEND_IMAGE=%s\nFRONTEND_IMAGE=%s\nIMAGE_TAG=%s\n' "$CI_REGISTRY_IMAGE/backend" "$CI_REGISTRY_IMAGE/frontend" "$CI_COMMIT_SHA" >> "$DEPLOY_DIR/.env"
+    - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" --username "$CI_REGISTRY_USER" --password-stdin
+    - cd "$DEPLOY_DIR"
+    - docker compose pull
+    - docker compose up -d --no-build --remove-orphans --wait --wait-timeout 120
+    - docker compose ps
+    - curl --fail --silent --show-error "http://127.0.0.1:${FRONTEND_PORT}/healthz"
+    - curl --fail --silent --show-error "http://127.0.0.1:${FRONTEND_PORT}/api/health"
+  after_script:
+    - docker logout "$CI_REGISTRY"
