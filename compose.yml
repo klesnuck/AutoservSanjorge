@@ -8,7 +8,7 @@ services:
       context: .
       dockerfile: Dockerfile
       target: backend
-    image: autoservsanjorge-backend:${IMAGE_TAG:-1.0.0}
+    image: "${BACKEND_IMAGE:-autoservsanjorge-backend}:${IMAGE_TAG:-1.0.0}"
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -52,7 +52,7 @@ services:
       args:
         VITE_API_URL: ""
         VITE_API_BASE: ""
-    image: autoservsanjorge-frontend:${IMAGE_TAG:-1.0.0}
+    image: "${FRONTEND_IMAGE:-autoservsanjorge-frontend}:${IMAGE_TAG:-1.0.0}"
     restart: unless-stopped
     ports:
       - "${FRONTEND_PORT:-8080}:80"
