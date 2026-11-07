@@ -188,7 +188,24 @@ function FormularioCarro() {
     return { manoObra, partes, tieneRefacciones };
   };
 
-  const handleNextStep = () => setModalStep(prev => Math.min(prev + 1, 3));
+  const handleNextStep = () => {
+    if (modalStep === 1) {
+      if (!selectedFecha) {
+        toast.warning('Por favor selecciona una fecha disponible para poder continuar.');
+        return;
+      }
+    } else if (modalStep === 2) {
+      if (!contactoForm.nombre?.trim()) {
+        toast.warning('El nombre completo es obligatorio para agendar la cita.');
+        return;
+      }
+      if (!contactoForm.telefono?.trim()) {
+        toast.warning('El teléfono es obligatorio para agendar la cita.');
+        return;
+      }
+    }
+    setModalStep(prev => Math.min(prev + 1, 3));
+  };
   const handlePrevStep = () => setModalStep(prev => Math.max(prev - 1, 1));
   const closeAndResetModal = () => {
     setIsModalOpen(false);
@@ -675,7 +692,8 @@ function FormularioCarro() {
               {/* Paso 1 */}
               {modalStep === 1 && (
                 <div>
-                  <h3 className="text-base font-bold text-gray-900 mb-6">Selecciona una fecha disponible</h3>
+                  <h3 className="text-base font-bold text-gray-900 mb-2">Selecciona una fecha disponible</h3>
+                  <p className="text-xs text-gray-500 mb-6">Elige el día en que traerás el vehículo al taller. Es obligatorio seleccionar un día para poder avanzar.</p>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
                     {fechasDisponibles.map((f, i) => {
                       const mesesObj = { Ene: '01', Feb: '02', Mar: '03', Abr: '04', May: '05', Jun: '06', Jul: '07', Ago: '08', Sep: '09', Oct: '10', Nov: '11', Dic: '12' };
@@ -688,7 +706,7 @@ function FormularioCarro() {
                         type="button"
                         onClick={() => { if(!isLleno) setSelectedFecha(f); }}
                         disabled={isLleno}
-                        className={`p-4 rounded-xl border-2 text-center transition-all ${isLleno ? 'opacity-50 cursor-not-allowed border-gray-100 bg-gray-50' : selectedFecha?.dia === f.dia ? 'border-[#1A56DB] bg-blue-50/20' : 'border-gray-100/80 hover:border-gray-300 bg-white'}`}
+                        className={`p-4 rounded-xl border-2 text-center transition-all ${isLleno ? 'opacity-50 cursor-not-allowed border-gray-100 bg-gray-50' : selectedFecha?.dia === f.dia ? 'border-[#1A56DB] bg-blue-50/20 shadow-sm' : 'border-gray-100/80 hover:border-gray-300 bg-white'}`}
                       >
                         <div className="text-xs font-bold mb-1 text-gray-500">{f.diaSemana}</div>
                         <div className={`text-2xl font-black mb-1 ${isLleno ? 'text-gray-400' : 'text-gray-900'}`}>{f.dia}</div>
@@ -697,38 +715,68 @@ function FormularioCarro() {
                       </button>
                     )})}
                   </div>
+
+                  {!selectedFecha && (
+                    <div className="mt-4 p-3.5 bg-amber-50 border border-amber-200/80 rounded-xl text-xs text-amber-800 font-semibold flex items-center gap-2.5">
+                      <svg className="w-4 h-4 text-amber-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <span>Debes seleccionar un día disponible en el calendario para poder continuar.</span>
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* Paso 2 */}
               {modalStep === 2 && (
                 <div className="max-w-2xl mx-auto">
-                  <h3 className="text-base font-bold text-gray-900 mb-6">Información de contacto</h3>
+                  <h3 className="text-base font-bold text-gray-900 mb-2">Información de contacto</h3>
+                  <p className="text-xs text-gray-500 mb-6">Ingresa tus datos personales para registrar la orden de tu cita. El nombre y teléfono son obligatorios.</p>
                   <div className="space-y-4">
                     <div>
                       <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-1.5">
                         <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                        Nombre completo *
+                        Nombre completo <span className="text-red-500">*</span>
                       </label>
-                      <input type="text" value={contactoForm.nombre} onChange={e => setContactoForm({ ...contactoForm, nombre: e.target.value })} className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-[#1A56DB] outline-none" />
+                      <input 
+                        type="text" 
+                        required
+                        placeholder="Ej. Juan Pérez García"
+                        value={contactoForm.nombre} 
+                        onChange={e => setContactoForm({ ...contactoForm, nombre: e.target.value })} 
+                        className={`w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-[#1A56DB] outline-none ${!contactoForm.nombre?.trim() ? 'border-amber-300 bg-amber-50/20' : 'border-gray-300'}`} 
+                      />
+                      {!contactoForm.nombre?.trim() && (
+                        <p className="text-[11px] text-amber-700 font-medium mt-1">El nombre es requerido para poder avanzar.</p>
+                      )}
                     </div>
                     <div>
                       <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-1.5">
                         <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
-                        Teléfono *
+                        Teléfono <span className="text-red-500">*</span>
                       </label>
-                      <input type="tel" value={contactoForm.telefono} onChange={e => setContactoForm({ ...contactoForm, telefono: e.target.value })} className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-[#1A56DB] outline-none" />
+                      <input 
+                        type="tel" 
+                        required
+                        placeholder="Ej. 8441234567"
+                        value={contactoForm.telefono} 
+                        onChange={e => setContactoForm({ ...contactoForm, telefono: e.target.value })} 
+                        className={`w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-[#1A56DB] outline-none ${!contactoForm.telefono?.trim() ? 'border-amber-300 bg-amber-50/20' : 'border-gray-300'}`} 
+                      />
+                      {!contactoForm.telefono?.trim() && (
+                        <p className="text-[11px] text-amber-700 font-medium mt-1">El teléfono es requerido para poder avanzar.</p>
+                      )}
                     </div>
                     <div>
                       <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-1.5">
                         <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                         Correo electrónico (opcional)
                       </label>
-                      <input type="email" value={contactoForm.correo} onChange={e => setContactoForm({ ...contactoForm, correo: e.target.value })} className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-[#1A56DB] outline-none" />
+                      <input type="email" placeholder="ejemplo@correo.com" value={contactoForm.correo} onChange={e => setContactoForm({ ...contactoForm, correo: e.target.value })} className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-[#1A56DB] outline-none" />
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1.5">Notas adicionales (opcional)</label>
-                      <textarea value={contactoForm.notas} onChange={e => setContactoForm({ ...contactoForm, notas: e.target.value })} className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-[#1A56DB] outline-none" rows="3"></textarea>
+                      <textarea value={contactoForm.notas} onChange={e => setContactoForm({ ...contactoForm, notas: e.target.value })} placeholder="Fallas o detalles que quieras mencionar..." className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-[#1A56DB] outline-none" rows="3"></textarea>
                     </div>
                   </div>
                 </div>
@@ -819,11 +867,16 @@ function FormularioCarro() {
 
               {modalStep < 3 ? (
                 <button
+                  type="button"
                   onClick={handleNextStep}
-                  disabled={(modalStep === 1 && !selectedFecha) || (modalStep === 2 && (!contactoForm.nombre || !contactoForm.telefono))}
+                  disabled={
+                    (modalStep === 1 && !selectedFecha) ||
+                    (modalStep === 2 && (!contactoForm.nombre?.trim() || !contactoForm.telefono?.trim()))
+                  }
                   className={`px-8 py-2.5 rounded-lg text-sm font-bold transition-all shadow-sm ${
-                    (modalStep === 1 && !selectedFecha) || (modalStep === 2 && (!contactoForm.nombre || !contactoForm.telefono))
-                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    (modalStep === 1 && !selectedFecha) ||
+                    (modalStep === 2 && (!contactoForm.nombre?.trim() || !contactoForm.telefono?.trim()))
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-60'
                       : 'bg-[#1A56DB] text-white hover:bg-blue-700'
                   }`}
                 >

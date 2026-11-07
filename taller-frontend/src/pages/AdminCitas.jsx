@@ -232,7 +232,24 @@ export default function AdminCitas() {
     }
   };
 
-  const nextStep = () => setModalStep(prev => Math.min(prev + 1, 3));
+  const nextStep = () => {
+    if (modalStep === 1) {
+      if (!selectedFecha) {
+        toast.warning('Por favor selecciona una fecha disponible para poder continuar.');
+        return;
+      }
+    } else if (modalStep === 2) {
+      if (!formData.nombre?.trim()) {
+        toast.warning('El nombre del cliente es obligatorio para continuar.');
+        return;
+      }
+      if (!formData.telefono?.trim()) {
+        toast.warning('El teléfono del cliente es obligatorio para continuar.');
+        return;
+      }
+    }
+    setModalStep(prev => Math.min(prev + 1, 3));
+  };
   const prevStep = () => setModalStep(prev => Math.max(prev - 1, 1));
   
   const handleCloseModal = () => {
@@ -578,6 +595,15 @@ export default function AdminCitas() {
                         );
                       })}
                     </div>
+
+                    {!selectedFecha && (
+                      <div className="mt-4 p-3 bg-amber-50 border border-amber-200/80 rounded-xl text-xs text-amber-800 font-semibold flex items-center gap-2">
+                        <svg className="w-4 h-4 text-amber-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <span>Debes seleccionar un día disponible en el calendario para poder continuar.</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -656,16 +682,36 @@ export default function AdminCitas() {
                       <div>
                         <label className="flex items-center gap-2 text-xs font-semibold text-gray-600 mb-1.5">
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
-                          Nombre completo *
+                          Nombre completo <span className="text-red-500">*</span>
                         </label>
-                        <input type="text" placeholder="Juan Pérez García" value={formData.nombre} onChange={e=>setFormData({...formData, nombre: e.target.value})} className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                        <input 
+                          type="text" 
+                          required
+                          placeholder="Juan Pérez García" 
+                          value={formData.nombre} 
+                          onChange={e=>setFormData({...formData, nombre: e.target.value})} 
+                          className={`w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none ${!formData.nombre?.trim() ? 'border-amber-300 bg-amber-50/20' : 'border-gray-300'}`} 
+                        />
+                        {!formData.nombre?.trim() && (
+                          <p className="text-[11px] text-amber-700 font-medium mt-1">El nombre es requerido para continuar.</p>
+                        )}
                       </div>
                       <div>
                         <label className="flex items-center gap-2 text-xs font-semibold text-gray-600 mb-1.5">
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-2.896-1.596-5.21-3.91-6.805-6.805l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" /></svg>
-                          Teléfono *
+                          Teléfono <span className="text-red-500">*</span>
                         </label>
-                        <input type="tel" placeholder="123-456-7890" value={formData.telefono} onChange={e=>setFormData({...formData, telefono: e.target.value})} className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                        <input 
+                          type="tel" 
+                          required
+                          placeholder="123-456-7890" 
+                          value={formData.telefono} 
+                          onChange={e=>setFormData({...formData, telefono: e.target.value})} 
+                          className={`w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none ${!formData.telefono?.trim() ? 'border-amber-300 bg-amber-50/20' : 'border-gray-300'}`} 
+                        />
+                        {!formData.telefono?.trim() && (
+                          <p className="text-[11px] text-amber-700 font-medium mt-1">El teléfono es requerido para continuar.</p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -893,11 +939,16 @@ export default function AdminCitas() {
               
               {modalStep < 3 ? (
                  <button
+                  type="button"
                   onClick={nextStep}
-                  disabled={modalStep === 1 && !selectedFecha}
+                  disabled={
+                    (modalStep === 1 && !selectedFecha) ||
+                    (modalStep === 2 && (!formData.nombre?.trim() || !formData.telefono?.trim()))
+                  }
                   className={`px-6 py-2 rounded-lg text-sm font-bold transition-all shadow-sm ${
-                    modalStep === 1 && !selectedFecha
-                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    (modalStep === 1 && !selectedFecha) ||
+                    (modalStep === 2 && (!formData.nombre?.trim() || !formData.telefono?.trim()))
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-60'
                     : 'bg-[#1A56DB] text-white hover:bg-blue-700'
                   }`}
                  >
