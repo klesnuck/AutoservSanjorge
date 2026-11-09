@@ -1,0 +1,79 @@
+#   cp .env.example .env
+#   docker compose up -d --build
+name: autoservsanjorge
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: backend
+    image: "${BACKEND_IMAGE:-autoservsanjorge-backend}:${IMAGE_TAG:-1.0.0}"
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL debe definirse en .env}
+      SUPABASE_DB_URL: ${SUPABASE_DB_URL:-}
+      DB_SSL: ${DB_SSL:-true}
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET debe definirse en .env}
+    expose:
+      - "4000"
+    networks:
+      - app-network
+    healthcheck:
+      # La base de datos es una instancia externa de Supabase, así que no hay
+      # un contenedor local de base de datos para ejecutar pg_isready. El
+      # endpoint /api/health ejecuta SELECT NOW() a través del pool de pg;
+      # por lo tanto, dbStatus === "connected" también verifica que la base
+      # de datos sea accesible.
+      test:
+        - CMD
+        - node
+        - "-e"
+        - >-
+          fetch('http://127.0.0.1:4000/api/health')
+          .then(r => r.json())
+          .then(b => process.exit(b.dbStatus === 'connected' ? 0 : 1))
+          .catch(() => process.exit(1))
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: frontend
+      args:
+        VITE_API_URL: ""
+        VITE_API_BASE: ""
+    image: "${FRONTEND_IMAGE:-autoservsanjorge-frontend}:${IMAGE_TAG:-1.0.0}"
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    networks:
+      - app-network
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - -q
+        - -O
+        - /dev/null
+        - http://127.0.0.1/
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+networks:
+  app-network:
+    driver: bridge
