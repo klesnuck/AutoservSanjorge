@@ -126,7 +126,7 @@ export default function Productos() {
         toast.success('Stock actualizado exitosamente');
         setAjustarStockProducto(null);
       } catch (err) {
-        toast.error(err.message, 'Error al ajustar stock');
+        toast.error(err.message, 'Error al ajustar el  stock');
       }
     }
   };
@@ -453,27 +453,27 @@ export default function Productos() {
                 </svg>
               </button>
             </div>
-            
+
             <form onSubmit={confirmarAjusteStock} className="p-5">
               <p className="text-sm text-gray-500 mb-4">
                 Ingresa la nueva cantidad en existencia para el producto <strong className="text-gray-800">{ajustarStockProducto.nombre}</strong>.
               </p>
-              
+
               <div className="mb-6">
                 <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Cantidad de stock actual</label>
                 <div className="relative">
-                  <input 
-                    type="number" 
+                  <input
+                    type="number"
                     required
                     min="0"
                     autoFocus
-                    value={nuevoStockVal} 
+                    value={nuevoStockVal}
                     onChange={e => setNuevoStockVal(e.target.value)}
                     className="w-full text-center text-3xl font-black text-gray-900 py-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-0 outline-none transition-colors"
                   />
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-1">
-                     <button type="button" onClick={() => setNuevoStockVal(Number(nuevoStockVal) + 1)} className="text-gray-400 hover:text-gray-700"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" /></svg></button>
-                     <button type="button" onClick={() => setNuevoStockVal(Math.max(0, Number(nuevoStockVal) - 1))} className="text-gray-400 hover:text-gray-700"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg></button>
+                    <button type="button" onClick={() => setNuevoStockVal(Number(nuevoStockVal) + 1)} className="text-gray-400 hover:text-gray-700"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" /></svg></button>
+                    <button type="button" onClick={() => setNuevoStockVal(Math.max(0, Number(nuevoStockVal) - 1))} className="text-gray-400 hover:text-gray-700"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg></button>
                   </div>
                 </div>
               </div>
