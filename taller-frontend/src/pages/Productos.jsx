@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import AdminLayout from '../layouts/AdminLayout';
 import { useToast } from '../components/Toast';
 import { fetchProductos, createProducto, updateProducto, deleteProducto } from '../utils/api';
