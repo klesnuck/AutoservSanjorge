@@ -62,7 +62,11 @@ function Inicio() {
       </div>
 
       {/* Hero de experiencia */}
+<<<<<<< HEAD
       <div className="w-full overflow-hidden shadow-lg relative h-[10vh] bg-blue-800">
+=======
+      <div className="w-full overflow-hidden shadow-lg relative h-[10vh] bg-red-800">
+>>>>>>> 2bd19bb2536e77d26ef9a60df3a1db4f90aab5c6
         <div className="absolute inset-0 flex items-center justify-center text-center text-white md:text-3x1">
           <h1 className="text-2x1 font-bold text-white drop-shadow-lg">
             Mas de 30 años de experiencia cuidando tu vehículo con pasión y profesionalismo

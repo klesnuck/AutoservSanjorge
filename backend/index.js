@@ -22,6 +22,8 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 
 const bcrypt = require('bcryptjs');
 const pool = require('./db');
@@ -46,8 +48,50 @@ const usersRoutes = require('./routes/usersRoutes');
 const rolesRoutes = require('./routes/rolesRoutes');
 
 const app = express();
+
+// ---------------------------------------------------------------------------
+// Cabeceras de Seguridad (Helmet & Ocultar cabeceras identificadoras)
+// ---------------------------------------------------------------------------
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+app.disable('x-powered-by');
+
 app.use(cors());
 app.use(express.json());
+
+// ---------------------------------------------------------------------------
+// Rate Limiting (Protección contra DDoS y Fuerza Bruta)
+// ---------------------------------------------------------------------------
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 300, // Límite general de peticiones por IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    status: 429,
+    error: 'Demasiadas solicitudes desde esta dirección IP. Intente de nuevo en 15 minutos.'
+  }
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 15, // Máximo 15 intentos en autenticación
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    status: 429,
+    error: 'Demasiados intentos de acceso desde esta IP. Bloqueado temporalmente por 15 minutos por seguridad.'
+  }
+});
+
+app.use('/api', apiLimiter);
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+app.use('/api/auth/verify-mfa', authLimiter);
+app.use('/auth/login', authLimiter);
+app.use('/auth/register', authLimiter);
+app.use('/auth/verify-mfa', authLimiter);
 
 /**
  * Roles por defecto que se insertan al inicializar la base de datos
@@ -594,6 +638,32 @@ app.use('/api/users', usersRoutes);
 app.use('/users', usersRoutes);
 app.use('/api/roles', rolesRoutes);
 app.use('/roles', rolesRoutes);
+
+// ---------------------------------------------------------------------------
+// Manejo controlado de rutas no encontradas (404)
+// ---------------------------------------------------------------------------
+app.use((req, res) => {
+  res.status(404).json({
+    status: 404,
+    error: 'Recurso no encontrado',
+    message: `La ruta solicitada '${req.originalUrl}' no existe en este servidor.`
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Manejo controlado de errores globales (500)
+// ---------------------------------------------------------------------------
+app.use((err, req, res, next) => {
+  console.error('[Error controlado en servidor]:', err);
+  const status = err.statusCode || err.status || 500;
+  res.status(status).json({
+    status,
+    error: err.name || 'Error del servidor',
+    message: process.env.NODE_ENV === 'production'
+      ? 'Ocurrió un error interno controlado en el servidor.'
+      : (err.message || 'Error interno del servidor')
+  });
+});
 
 const PORT = process.env.PORT || 4000;
 

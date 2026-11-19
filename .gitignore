@@ -1,4 +1,5 @@
 node_modules/
+<<<<<<< HEAD
 .npm/
 .vercel/
 .env
@@ -6,3 +7,8 @@ node_modules/
 !.env.example
 coverage/
 test-results/
+=======
+.env
+.DS_Store
+dist/
+>>>>>>> 2bd19bb2536e77d26ef9a60df3a1db4f90aab5c6
