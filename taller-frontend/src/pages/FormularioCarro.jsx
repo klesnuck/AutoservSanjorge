@@ -12,7 +12,7 @@ const generateFechas = () => {
   const fechas = [];
   const diasSemana = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
   const mesesAbrev = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-  
+
   let d = new Date();
   d.setDate(d.getDate() + 1); // Empezar desde mañana
 
@@ -127,7 +127,7 @@ function FormularioCarro() {
         s.refacciones.forEach(ref => {
           // Buscamos si este producto es compatible con el modelo seleccionado
           const compatible = productosCompatibles.find(pc => String(pc.idproductos || pc.idProductos) === String(ref.id));
-          
+
           if (form.idmodelo) {
             // Si hay modelo seleccionado, SOLO sumamos si es compatible
             if (compatible) {
@@ -159,13 +159,13 @@ function FormularioCarro() {
       const s = serviciosDisponibles.find(sv => sv.nombre === nombreServicio);
       if (s) {
         manoObra += Number(s.manoObra || s.mano_obra || s.manoobra || 0);
-        
+
         let costoPartesServicio = 0;
         if (s.refacciones && s.refacciones.length > 0) {
           tieneRefacciones = true;
           s.refacciones.forEach(ref => {
             const compatible = productosCompatibles.find(pc => String(pc.idproductos || pc.idProductos) === String(ref.id));
-            
+
             if (form.idmodelo) {
               if (compatible) {
                 const precioUnitario = Number(compatible.precio_unitario);
@@ -233,7 +233,7 @@ function FormularioCarro() {
       const meses = { Ene: '01', Feb: '02', Mar: '03', Abr: '04', May: '05', Jun: '06', Jul: '07', Ago: '08', Sep: '09', Oct: '10', Nov: '11', Dic: '12' };
       const fechaStr = `${selectedFecha.year}-${meses[selectedFecha.mes]}-${selectedFecha.dia.padStart(2, '0')}`;
       const serviciosText = form.servicios?.length > 0 ? form.servicios.join(', ') : 'Servicio General';
-      
+
       const newNota = `Cliente: ${contactoForm.nombre} - ${contactoForm.telefono} | Vehículo: ${vehiculoText} | Servicios: ${serviciosText}` + (contactoForm.notas ? ` | Notas: ${contactoForm.notas}` : '');
 
       await createCitaCompleta({
@@ -280,7 +280,7 @@ function FormularioCarro() {
         setMarca(marcasData || []);
         setAnio(aniosData || []);
         setMotores(motoresData || []);
-        
+
         const dataServicios = serviciosData || [];
         setServiciosDisponibles(dataServicios);
 
@@ -402,11 +402,11 @@ function FormularioCarro() {
                   form.servicios.map((s, idx) => (
                     <div key={idx} className="flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-800 px-3 py-2 rounded-lg text-sm font-medium">
                       <span>{s}</span>
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         onClick={() => {
                           setForm(prev => ({
-                            ...prev, 
+                            ...prev,
                             servicios: prev.servicios.filter(serv => serv !== s)
                           }));
                         }}
@@ -585,8 +585,8 @@ function FormularioCarro() {
               <div className="flex justify-between items-start gap-4">
                 <span>Servicios</span>
                 <span className="font-semibold text-gray-900 text-right">
-                  {form.servicios?.filter(name => serviciosDisponibles.some(s => s.nombre === name)).length > 0 
-                    ? form.servicios.filter(name => serviciosDisponibles.some(s => s.nombre === name)).join(', ') 
+                  {form.servicios?.filter(name => serviciosDisponibles.some(s => s.nombre === name)).length > 0
+                    ? form.servicios.filter(name => serviciosDisponibles.some(s => s.nombre === name)).join(', ')
                     : 'Servicio General'}
                 </span>
               </div>
@@ -656,8 +656,8 @@ function FormularioCarro() {
 
               <h2 className="text-xl font-bold text-gray-900 mb-1">Agendar servicio</h2>
               <p className="text-sm text-gray-500 mb-6 max-w-lg">
-                {form.servicios?.filter(name => serviciosDisponibles.some(s => s.nombre === name)).length > 0 
-                  ? form.servicios.filter(name => serviciosDisponibles.some(s => s.nombre === name)).join(', ') 
+                {form.servicios?.filter(name => serviciosDisponibles.some(s => s.nombre === name)).length > 0
+                  ? form.servicios.filter(name => serviciosDisponibles.some(s => s.nombre === name)).join(', ')
                   : 'Servicio seleccionado'}
               </p>
 
@@ -699,21 +699,22 @@ function FormularioCarro() {
                       const mesesObj = { Ene: '01', Feb: '02', Mar: '03', Abr: '04', May: '05', Jun: '06', Jul: '07', Ago: '08', Sep: '09', Oct: '10', Nov: '11', Dic: '12' };
                       const strKey = `${f.year}-${mesesObj[f.mes]}-${f.dia.padStart(2, '0')}`;
                       const isLleno = fechasLlenas.includes(strKey);
-                      
+
                       return (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => { if(!isLleno) setSelectedFecha(f); }}
-                        disabled={isLleno}
-                        className={`p-4 rounded-xl border-2 text-center transition-all ${isLleno ? 'opacity-50 cursor-not-allowed border-gray-100 bg-gray-50' : selectedFecha?.dia === f.dia ? 'border-[#1A56DB] bg-blue-50/20 shadow-sm' : 'border-gray-100/80 hover:border-gray-300 bg-white'}`}
-                      >
-                        <div className="text-xs font-bold mb-1 text-gray-500">{f.diaSemana}</div>
-                        <div className={`text-2xl font-black mb-1 ${isLleno ? 'text-gray-400' : 'text-gray-900'}`}>{f.dia}</div>
-                        <div className="text-sm font-medium text-gray-500">{f.mes}</div>
-                        {isLleno && <div className="text-[10px] text-red-500 font-bold mt-1">Lleno</div>}
-                      </button>
-                    )})}
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => { if (!isLleno) setSelectedFecha(f); }}
+                          disabled={isLleno}
+                          className={`p-4 rounded-xl border-2 text-center transition-all ${isLleno ? 'opacity-50 cursor-not-allowed border-gray-100 bg-gray-50' : selectedFecha?.dia === f.dia ? 'border-[#1A56DB] bg-blue-50/20 shadow-sm' : 'border-gray-100/80 hover:border-gray-300 bg-white'}`}
+                        >
+                          <div className="text-xs font-bold mb-1 text-gray-500">{f.diaSemana}</div>
+                          <div className={`text-2xl font-black mb-1 ${isLleno ? 'text-gray-400' : 'text-gray-900'}`}>{f.dia}</div>
+                          <div className="text-sm font-medium text-gray-500">{f.mes}</div>
+                          {isLleno && <div className="text-[10px] text-red-500 font-bold mt-1">Lleno</div>}
+                        </button>
+                      )
+                    })}
                   </div>
 
                   {!selectedFecha && (
@@ -736,15 +737,16 @@ function FormularioCarro() {
                     <div>
                       <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-1.5">
                         <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                        Nombre completo <span className="text-red-500">*</span>
+                        Nombre  <span className="text-red-500">*</span>
                       </label>
-                      <input 
-                        type="text" 
+
+                      <input
+                        type="text"
                         required
-                        placeholder="Ej. Juan Pérez García"
-                        value={contactoForm.nombre} 
-                        onChange={e => setContactoForm({ ...contactoForm, nombre: e.target.value })} 
-                        className={`w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-[#1A56DB] outline-none ${!contactoForm.nombre?.trim() ? 'border-amber-300 bg-amber-50/20' : 'border-gray-300'}`} 
+                        placeholder="Ej. Juan"
+                        value={contactoForm.nombre}
+                        onChange={e => setContactoForm({ ...contactoForm, nombre: e.target.value })}
+                        className={`w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-[#1A56DB] outline-none ${!contactoForm.nombre?.trim() ? 'border-amber-300 bg-amber-50/20' : 'border-gray-300'}`}
                       />
                       {!contactoForm.nombre?.trim() && (
                         <p className="text-[11px] text-amber-700 font-medium mt-1">El nombre es requerido para poder avanzar.</p>
@@ -752,16 +754,36 @@ function FormularioCarro() {
                     </div>
                     <div>
                       <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-1.5">
+                        <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                        Apellido  <span className="text-red-500">*</span>
+                      </label>
+
+                      <input
+                        type="text"
+                        required
+                        placeholder="Ej. García"
+                        value={contactoForm.apellido}
+                        onChange={e => setContactoForm({ ...contactoForm, apellido: e.target.value })}
+                        className={`w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-[#1A56DB] outline-none ${!contactoForm.nombre?.trim() ? 'border-amber-300 bg-amber-50/20' : 'border-gray-300'}`}
+                      />
+                      {!contactoForm.apellido?.trim() && (
+                        <p className="text-[11px] text-amber-700 font-medium mt-1">El apellido es requerido para poder avanzar.</p>
+                      )}
+                    </div>
+
+
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-1.5">
                         <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
                         Teléfono <span className="text-red-500">*</span>
                       </label>
-                      <input 
-                        type="tel" 
+                      <input
+                        type="tel"
                         required
                         placeholder="Ej. 8441234567"
-                        value={contactoForm.telefono} 
-                        onChange={e => setContactoForm({ ...contactoForm, telefono: e.target.value })} 
-                        className={`w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-[#1A56DB] outline-none ${!contactoForm.telefono?.trim() ? 'border-amber-300 bg-amber-50/20' : 'border-gray-300'}`} 
+                        value={contactoForm.telefono}
+                        onChange={e => setContactoForm({ ...contactoForm, telefono: e.target.value })}
+                        className={`w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-[#1A56DB] outline-none ${!contactoForm.telefono?.trim() ? 'border-amber-300 bg-amber-50/20' : 'border-gray-300'}`}
                       />
                       {!contactoForm.telefono?.trim() && (
                         <p className="text-[11px] text-amber-700 font-medium mt-1">El teléfono es requerido para poder avanzar.</p>
@@ -800,7 +822,7 @@ function FormularioCarro() {
                           {marca.find(m => String(m.idmarca ?? m.idMarcas ?? m.id) === String(form.idmarca))?.nombre || 'Marca'} {modelos.find(m => String(m.idmodelo ?? m.idModelos ?? m.id) === String(form.idmodelo))?.nombre || 'Modelo'} {anio.find(a => String(a.idanio || a.idAnio || a.id || a.value) === String(form.idanio))?.anio || anio.find(a => String(a.idanio || a.idAnio || a.id || a.value) === String(form.idanio))?.nombre || form.idanio || 'Año'}
                         </span>
                         <span className="text-sm font-normal text-gray-600">
-                          {form.idmotor ? `Motor: ${motores.find(m => String(m.idmotor || m.idMotores || m.id || m.value) === String(form.idmotor))?.nombre || form.idmotor} | ` : ''} 
+                          {form.idmotor ? `Motor: ${motores.find(m => String(m.idmotor || m.idMotores || m.id || m.value) === String(form.idmotor))?.nombre || form.idmotor} | ` : ''}
                           Kilometraje: {form.kilometraje || 'No especificado'}
                         </span>
                       </div>
@@ -873,12 +895,11 @@ function FormularioCarro() {
                     (modalStep === 1 && !selectedFecha) ||
                     (modalStep === 2 && (!contactoForm.nombre?.trim() || !contactoForm.telefono?.trim()))
                   }
-                  className={`px-8 py-2.5 rounded-lg text-sm font-bold transition-all shadow-sm ${
-                    (modalStep === 1 && !selectedFecha) ||
+                  className={`px-8 py-2.5 rounded-lg text-sm font-bold transition-all shadow-sm ${(modalStep === 1 && !selectedFecha) ||
                     (modalStep === 2 && (!contactoForm.nombre?.trim() || !contactoForm.telefono?.trim()))
-                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-60'
-                      : 'bg-[#1A56DB] text-white hover:bg-blue-700'
-                  }`}
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-60'
+                    : 'bg-[#1A56DB] text-white hover:bg-blue-700'
+                    }`}
                 >
                   Continuar
                 </button>

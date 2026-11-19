@@ -4,6 +4,7 @@ import { AuthContext } from "../context/AuthContext";
 
 function Register() {
   const [name, setName] = useState("");
+  const [lastname, setLasname] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -88,15 +89,16 @@ function Register() {
 
   const isFormComplete = () => {
     return name.trim() &&
-           email.trim() &&
-           phone.trim() &&
-           password.trim() &&
-           confirmPassword.trim() &&
-           !nameError &&
-           !emailError &&
-           !phoneError &&
-           !passwordError &&
-           !confirmPasswordError;
+      email.trim() &&
+      lastname.trim() &&
+      phone.trim() &&
+      password.trim() &&
+      confirmPassword.trim() &&
+      !nameError &&
+      !emailError &&
+      !phoneError &&
+      !passwordError &&
+      !confirmPasswordError;
   };
 
   const handleSubmit = async (e) => {
@@ -104,6 +106,7 @@ function Register() {
     setError("");
 
     const isNameValid = validateNameField();
+    const isLastname = validateLastenameField();
     const isEmailValid = validateEmailField();
     const isPhoneValid = validatePhoneField();
     const isPasswordValid = validatePasswordField();
@@ -163,7 +166,7 @@ function Register() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Nombre */}
             <div>
-              <label className="block text-gray-700 font-semibold mb-2">Nombre completo</label>
+              <label className="block text-gray-700 font-semibold mb-2">Nombre</label>
               <input
                 type="text"
                 value={name}
