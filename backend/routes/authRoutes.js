@@ -52,9 +52,10 @@ const quoteIdentifier = (id) => `"${id}"`;
  */
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password, phone } = req.body;
+    const { name, lastname, apellido, email, password, phone } = req.body;
+    const rawLastname = typeof lastname === 'string' ? lastname : (typeof apellido === 'string' ? apellido : '');
 
-    if (!validateName(name) || !validateEmail(email) || !validatePassword(password)) {
+    if (!validateName(name) || !validateName(rawLastname) || !validateEmail(email) || !validatePassword(password)) {
       return res.status(400).json({ error: 'Datos de registro inválidos' });
     }
     if (phone && !validatePhone(phone)) {
@@ -73,8 +74,8 @@ router.post('/register', async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     await pool.query(
-      `INSERT INTO Usuarios (${quoteIdentifier(userRoleIdColumn)}, email, ${quoteIdentifier(userPasswordColumn)}, nombre, telefono) VALUES ($1, $2, $3, $4, $5)`,
-      [roleRow[0].idroles, email.trim(), hashedPassword, name.trim(), phone || '']
+      `INSERT INTO Usuarios (${quoteIdentifier(userRoleIdColumn)}, email, ${quoteIdentifier(userPasswordColumn)}, nombre, apellido, telefono) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [roleRow[0].idroles, email.trim(), hashedPassword, name.trim(), rawLastname.trim(), phone || '']
     );
 
     res.json({ success: true });
@@ -129,7 +130,7 @@ router.post('/login', async (req, res) => {
 
     const passwordReference = `u.${quoteIdentifier(userPasswordColumn)} AS passwordhash`;
     const { rows } = await pool.query(
-      `SELECT u.idUsuarios, u.email, ${passwordReference}, u.nombre, u.telefono, r.nombre AS rolename, r.permisos
+      `SELECT u.idUsuarios, u.email, ${passwordReference}, u.nombre, u.apellido, u.telefono, r.nombre AS rolename, r.permisos
        FROM Usuarios u
        JOIN Roles r ON u.${userRoleIdColumn} = r.idRoles
        WHERE LOWER(u.email) = LOWER($1)`,
@@ -165,6 +166,7 @@ router.post('/login', async (req, res) => {
         id: user.idusuarios,
         email: user.email,
         name: user.nombre,
+        lastname: user.apellido || '',
         phone: user.telefono || '',
         role: user.rolename,
         permissions,
@@ -184,6 +186,7 @@ router.post('/login', async (req, res) => {
         id: user.idusuarios,
         email: user.email,
         name: user.nombre,
+        lastname: user.apellido || '',
         phone: user.telefono || '',
         role: user.rolename,
         permissions,
@@ -265,6 +268,7 @@ router.post('/verify-mfa', async (req, res) => {
       id: session.user.id,
       email: session.user.email,
       name: session.user.name,
+      lastname: session.user.lastname || '',
       phone: session.user.phone,
       role: session.user.role,
       permissions: session.user.permissions,
@@ -332,7 +336,7 @@ const { authenticateToken } = require('../middleware/auth');
 router.get('/me', authenticateToken, async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT u.idUsuarios, u.email, u.nombre, u.telefono, r.nombre AS rolename, r.permisos
+      `SELECT u.idUsuarios, u.email, u.nombre, u.apellido, u.telefono, r.nombre AS rolename, r.permisos
        FROM Usuarios u
        JOIN Roles r ON u.${userRoleIdColumn} = r.idRoles
        WHERE u.idUsuarios = $1`,
@@ -350,6 +354,7 @@ router.get('/me', authenticateToken, async (req, res) => {
       id: user.idusuarios,
       email: user.email,
       name: user.nombre,
+      lastname: user.apellido || '',
       phone: user.telefono || '',
       role: user.rolename,
       permissions,

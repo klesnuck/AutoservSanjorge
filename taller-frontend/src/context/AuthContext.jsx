@@ -231,12 +231,12 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async ({ name, email, password, phone }) => {
+  const register = async ({ name, lastname, email, password, phone }) => {
     try {
       const response = await fetch(`${API_BASE}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, phone }),
+        body: JSON.stringify({ name, lastname, email, password, phone }),
       });
       const data = await response.json();
       if (!response.ok) {
@@ -322,6 +322,7 @@ export const AuthProvider = ({ children }) => {
         headers: getAuthHeaders(),
         body: JSON.stringify({
           name: user.name,
+          lastname: user.lastname,
           email: user.email,
           password: user.password,
           role: user.role,

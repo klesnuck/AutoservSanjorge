@@ -18,8 +18,11 @@ CREATE TABLE IF NOT EXISTS Usuarios (
   email VARCHAR(100) UNIQUE NOT NULL,
   contrasena VARCHAR(255) NOT NULL,
   nombre VARCHAR(100),
+  apellido VARCHAR(100),
   telefono VARCHAR(20)
 );
+
+ALTER TABLE Usuarios ADD COLUMN IF NOT EXISTS apellido VARCHAR(100);
 
 -- 3. Catálogo de Marcas de Vehículos
 CREATE TABLE IF NOT EXISTS Marca (

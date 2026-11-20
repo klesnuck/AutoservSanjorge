@@ -51,6 +51,7 @@ const formatUserRow = (row) => ({
   roleId: row.idroles,
   email: row.email,
   name: row.nombre,
+  lastname: row.apellido || '',
   phone: row.telefono || '',
   role: row.rolename,
 });
@@ -67,7 +68,7 @@ const formatUserRow = (row) => ({
 router.get('/', async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT u.idUsuarios, u.idRoles, u.email, u.nombre, u.telefono, r.nombre AS rolename
+      `SELECT u.idUsuarios, u.idRoles, u.email, u.nombre, u.apellido, u.telefono, r.nombre AS rolename
        FROM Usuarios u
        JOIN Roles r ON u.idRoles = r.idRoles
        ORDER BY u.idUsuarios`
@@ -90,10 +91,14 @@ router.get('/', async (req, res) => {
  */
 router.post('/', async (req, res) => {
   try {
-    const { name, email, password, role, phone } = req.body;
+    const { name, lastname, apellido, email, password, role, phone } = req.body;
+    const rawLastname = typeof lastname === 'string' ? lastname : (typeof apellido === 'string' ? apellido : '');
 
     if (!validateName(name) || !validateEmail(email) || !validatePassword(password)) {
       return res.status(400).json({ error: 'Datos de usuario inválidos' });
+    }
+    if (rawLastname && !validateName(rawLastname)) {
+      return res.status(400).json({ error: 'Apellido inválido' });
     }
     if (phone && !validatePhone(phone)) {
       return res.status(400).json({ error: 'Teléfono inválido' });
@@ -106,12 +111,12 @@ router.post('/', async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const result = await pool.query(
-      `INSERT INTO Usuarios (${quoteIdentifier(userRoleIdColumn)}, email, ${quoteIdentifier(userPasswordColumn)}, nombre, telefono) VALUES ($1, $2, $3, $4, $5) RETURNING idUsuarios`,
-      [roleRow[0].idroles, email.trim(), hashedPassword, name.trim(), phone || '']
+      `INSERT INTO Usuarios (${quoteIdentifier(userRoleIdColumn)}, email, ${quoteIdentifier(userPasswordColumn)}, nombre, apellido, telefono) VALUES ($1, $2, $3, $4, $5, $6) RETURNING idUsuarios`,
+      [roleRow[0].idroles, email.trim(), hashedPassword, name.trim(), rawLastname.trim(), phone || '']
     );
 
     const { rows } = await pool.query(
-      `SELECT u.idUsuarios, u.${userRoleIdColumn}, u.email, u.nombre, u.telefono, r.nombre AS rolename
+      `SELECT u.idUsuarios, u.${userRoleIdColumn}, u.email, u.nombre, u.apellido, u.telefono, r.nombre AS rolename
        FROM Usuarios u
        JOIN Roles r ON u.${userRoleIdColumn} = r.idRoles WHERE u.idUsuarios = $1`,
       [result.rows[0].idusuarios]
@@ -141,10 +146,15 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const userId = Number(req.params.id);
-    const { name, email, password, role, phone } = req.body;
+    const { name, lastname, apellido, email, password, role, phone } = req.body;
+    const hasLastname = typeof lastname === 'string' || typeof apellido === 'string';
+    const rawLastname = typeof lastname === 'string' ? lastname : (typeof apellido === 'string' ? apellido : '');
 
     if (Number.isNaN(userId) || !validateName(name) || !validateEmail(email)) {
       return res.status(400).json({ error: 'Datos de usuario inválidos' });
+    }
+    if (hasLastname && rawLastname.trim().length > 100) {
+      return res.status(400).json({ error: 'Apellido inválido' });
     }
     if (password && !validatePassword(password)) {
       return res.status(400).json({ error: 'Contraseña inválida' });
@@ -163,23 +173,30 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
-    const fields = [roleRow[0].idroles, email.trim(), name.trim(), phone || '', userId];
+    const fields = [roleRow[0].idroles, email.trim(), name.trim(), phone || ''];
     let query = `UPDATE Usuarios SET ${quoteIdentifier(userRoleIdColumn)} = $1, email = $2, nombre = $3, telefono = $4`;
     let fieldCount = 4;
+
+    if (hasLastname) {
+      fieldCount++;
+      query += `, apellido = $${fieldCount}`;
+      fields.push(rawLastname.trim());
+    }
 
     if (password) {
       const hashedPassword = await bcrypt.hash(password, 10);
       fieldCount++;
       query += `, ${quoteIdentifier(userPasswordColumn)} = $${fieldCount}`;
-      fields.splice(4, 0, hashedPassword);
+      fields.push(hashedPassword);
     }
     fieldCount++;
     query += ` WHERE idUsuarios = $${fieldCount}`;
+    fields.push(userId);
 
     await pool.query(query, fields);
 
     const { rows } = await pool.query(
-      `SELECT u.idUsuarios, u.idRoles, u.email, u.nombre, u.telefono, r.nombre AS rolename
+      `SELECT u.idUsuarios, u.idRoles, u.email, u.nombre, u.apellido, u.telefono, r.nombre AS rolename
        FROM Usuarios u
        JOIN Roles r ON u.idRoles = r.idRoles WHERE u.idUsuarios = $1`,
       [userId]

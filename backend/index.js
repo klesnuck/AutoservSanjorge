@@ -210,9 +210,12 @@ const initializeDatabase = async () => {
       email VARCHAR(100) UNIQUE,
       contrasena VARCHAR(255),
       nombre VARCHAR(100),
+      apellido VARCHAR(100),
       telefono VARCHAR(20)
     );
   `);
+
+  await pool.query(`ALTER TABLE Usuarios ADD COLUMN IF NOT EXISTS apellido VARCHAR(100)`).catch(() => {});
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS Marca (
@@ -579,6 +582,7 @@ const formatUserRow = (row) => ({
   roleId: row.idroles,
   email: row.email,
   name: row.nombre,
+  lastname: row.apellido || '',
   phone: row.telefono || '',
   role: row.rolename,
 });

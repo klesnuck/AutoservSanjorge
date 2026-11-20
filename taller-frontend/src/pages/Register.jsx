@@ -4,7 +4,7 @@ import { AuthContext } from "../context/AuthContext";
 
 function Register() {
   const [name, setName] = useState("");
-  const [lastname, setLasname] = useState("");
+  const [lastname, setLastname] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -13,6 +13,7 @@ function Register() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [nameError, setNameError] = useState("");
+  const [lastnameError, setLastnameError] = useState("");
   const [emailError, setEmailError] = useState("");
   const [phoneError, setPhoneError] = useState("");
   const [passwordError, setPasswordError] = useState("");
@@ -57,8 +58,14 @@ function Register() {
   };
 
   const validateNameField = () => {
-    const message = name.trim() ? "" : "El nombre completo es obligatorio.";
+    const message = name.trim() ? "" : "El nombre es obligatorio.";
     setNameError(message);
+    return !message;
+  };
+
+  const validateLastnameField = () => {
+    const message = lastname.trim() ? "" : "El apellido es obligatorio.";
+    setLastnameError(message);
     return !message;
   };
 
@@ -89,12 +96,13 @@ function Register() {
 
   const isFormComplete = () => {
     return name.trim() &&
-      email.trim() &&
       lastname.trim() &&
+      email.trim() &&
       phone.trim() &&
       password.trim() &&
       confirmPassword.trim() &&
       !nameError &&
+      !lastnameError &&
       !emailError &&
       !phoneError &&
       !passwordError &&
@@ -106,13 +114,13 @@ function Register() {
     setError("");
 
     const isNameValid = validateNameField();
-    const isLastname = validateLastenameField();
+    const isLastnameValid = validateLastnameField();
     const isEmailValid = validateEmailField();
     const isPhoneValid = validatePhoneField();
     const isPasswordValid = validatePasswordField();
     const isConfirmPasswordValid = validateConfirmPasswordField();
 
-    if (!isNameValid || !isEmailValid || !isPhoneValid || !isPasswordValid || !isConfirmPasswordValid) {
+    if (!isNameValid || !isLastnameValid || !isEmailValid || !isPhoneValid || !isPasswordValid || !isConfirmPasswordValid) {
       setError("Corrige los errores marcados antes de continuar.");
       return;
     }
@@ -126,7 +134,7 @@ function Register() {
 
     setLoading(true);
 
-    const result = await register({ name, email, password, phone });
+    const result = await register({ name, lastname, email, password, phone });
     if (result.success) {
       navigate("/login");
     } else {
@@ -174,14 +182,30 @@ function Register() {
                   setName(e.target.value);
                   if (nameError) setNameError("");
                 }}
-                onBlur={() => {
+                onBlur={(e) => {
                   validateNameField();
                   checkExistingUser(email, e.target.value);
                 }}
-                placeholder="Juan Pérez García"
+                placeholder="Juan"
                 className={`w-full px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${nameError ? 'border-red-500 border' : 'border border-gray-300'}`}
               />
               {nameError && <p className="mt-2 text-sm text-red-600">{nameError}</p>}
+            </div>
+            {/* Apellido */}
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">Apellido</label>
+              <input
+                type="text"
+                value={lastname}
+                onChange={(e) => {
+                  setLastname(e.target.value);
+                  if (lastnameError) setLastnameError("");
+                }}
+                onBlur={validateLastnameField}
+                placeholder="Pérez García"
+                className={`w-full px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${lastnameError ? 'border-red-500 border' : 'border border-gray-300'}`}
+              />
+              {lastnameError && <p className="mt-2 text-sm text-red-600">{lastnameError}</p>}
             </div>
 
             {/* Email field */}
@@ -196,7 +220,7 @@ function Register() {
                   setEmail(e.target.value);
                   if (emailError) setEmailError("");
                 }}
-                onBlur={() => {
+                onBlur={(e) => {
                   validateEmailField();
                   checkExistingUser(e.target.value, name);
                 }}
