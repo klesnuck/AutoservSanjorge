@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Guía de Pruebas de Seguridad (OWASP Top 10) — AutoServicio San Jorge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --navy: #1E2761;
+      --navy-dark: #141A42;
+      --crimson: #990011;
+      --ocean: #065A82;
+      --bg: #F4F6FA;
+      --surface: #FFFFFF;
+      --text: #1F2937;
+      --muted: #6B7280;
+      --border: #E5E7EB;
+      --code-bg: #0F172A;
+      --code-text: #E2E8F0;
+      --ok-bg: #ECFDF5;
+      --ok-text: #065F46;
+      --ok-border: #A7F3D0;
+      --warn-bg: #FEF2F2;
+      --warn-text: #991B1B;
+      --warn-border: #FECACA;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 2rem 1rem 4rem;
+    }
+
+    .toolbar {
+      max-width: 960px;
+      margin: 0 auto 1rem;
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+    }
+
+    .btn-print {
+      background: var(--navy);
+      color: #fff;
+      border: none;
+      padding: 0.6rem 1.1rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.875rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      box-shadow: 0 2px 6px rgba(30, 39, 97, 0.2);
+      transition: background 0.15s ease;
+    }
+    .btn-print:hover { background: var(--navy-dark); }
+
+    .document {
+      max-width: 960px;
+      margin: 0 auto;
+      background: var(--surface);
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    /* Header / Portada */
+    .doc-header {
+      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-dark) 100%);
+      color: #fff;
+      padding: 2.75rem 3rem;
+      border-bottom: 6px solid var(--crimson);
+    }
+    .doc-eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #CADCFC;
+      margin-bottom: 0.5rem;
+    }
+    .doc-header h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 0.6rem;
+    }
+    .doc-header p {
+      color: #DCE7FA;
+      font-size: 0.98rem;
+      max-width: 720px;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-top: 1.75rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+      font-size: 0.82rem;
+    }
+    .meta-label { color: #93C5FD; font-weight: 600; text-transform: uppercase; font-size: 0.68rem; letter-spacing: 0.8px; }
+    .meta-val { color: #fff; font-weight: 600; margin-top: 0.15rem; }
+
+    .content { padding: 2.5rem 3rem 3rem; }
+
+    /* Índice y Requisitos */
+    .prereq-box {
+      background: #F8FAFC;
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--ocean);
+      border-radius: 10px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 2.25rem;
+    }
+    .prereq-box h2 {
+      font-size: 1.05rem;
+      color: var(--navy);
+      margin-bottom: 0.75rem;
+    }
+    .prereq-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-top: 0.75rem;
+    }
+
+    /* Secciones OWASP */
+    .owasp-section {
+      margin-bottom: 2.5rem;
+      page-break-inside: avoid;
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding-bottom: 0.65rem;
+      border-bottom: 2px solid var(--navy);
+      margin-bottom: 1.25rem;
+    }
+    .section-title-group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .owasp-badge {
+      background: var(--navy);
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+    }
+    .date-badge {
+      background: #FEE2E2;
+      color: var(--crimson);
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .section-header h2 {
+      font-size: 1.3rem;
+      color: var(--navy);
+      font-weight: 800;
+    }
+
+    /* Tarjeta de cada prueba */
+    .test-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.15rem 1.35rem;
+      margin-bottom: 1rem;
+      background: #fff;
+      page-break-inside: avoid;
+    }
+    .test-card h3 {
+      font-size: 1rem;
+      color: #111827;
+      font-weight: 700;
+      margin-bottom: 0.35rem;
+    }
+    .test-obj {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+
+    pre {
+      background: var(--code-bg);
+      color: var(--code-text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.79rem;
+      padding: 0.85rem 1rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 0.6rem 0 0.85rem;
+      line-height: 1.5;
+    }
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.84em;
+      background: #EEF2FF;
+      color: var(--navy);
+      padding: 0.1rem 0.35rem;
+      border-radius: 4px;
+    }
+    pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+    }
+
+    .result-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+    .result-row.single { grid-template-columns: 1fr; }
+    .pill {
+      padding: 0.65rem 0.85rem;
+      border-radius: 8px;
+      font-size: 0.84rem;
+    }
+    .pill-ok {
+      background: var(--ok-bg);
+      color: var(--ok-text);
+      border: 1px solid var(--ok-border);
+    }
+    .pill-fail {
+      background: var(--warn-bg);
+      color: var(--warn-text);
+      border: 1px solid var(--warn-border);
+    }
+    .pill strong { display: block; font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 0.15rem; }
+
+    ul.steps {
+      margin: 0.4rem 0 0.75rem 1.25rem;
+      font-size: 0.88rem;
+      color: #374151;
+    }
+    ul.steps li { margin-bottom: 0.25rem; }
+
+    /* Tabla Checklist */
+    .checklist-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.84rem;
+      margin-top: 1rem;
+    }
+    .checklist-table th {
+      background: var(--navy);
+      color: #fff;
+      text-align: left;
+      padding: 0.65rem 0.75rem;
+      font-weight: 600;
+    }
+    .checklist-table td {
+      padding: 0.55rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .checklist-table tr:nth-child(even) td { background: #F9FAFB; }
+    .chk-cell { text-align: center; width: 70px; }
+    .chk-cell input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--navy);
+      cursor: pointer;
+    }
+
+    .footer-sign {
+      margin-top: 2.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px dashed var(--border);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .sign-line {
+      margin-top: 2.25rem;
+      border-top: 1px solid #9CA3AF;
+      padding-top: 0.4rem;
+      text-align: center;
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    @media (max-width: 720px) {
+      .doc-header, .content { padding: 1.5rem; }
+      .meta-grid, .prereq-grid, .result-row, .footer-sign { grid-template-columns: 1fr; }
+    }
+
+    @media print {
+      body { background: #fff; padding: 0; }
+      .toolbar { display: none; }
+      .document { box-shadow: none; border: none; border-radius: 0; max-width: 100%; }
+      .doc-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .owasp-badge, .date-badge, .pill-ok, .pill-fail, .checklist-table th, pre {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .checklist-section { page-break-before: always; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button class="btn-print" onclick="window.print()">🖨️ Imprimir / Guardar como PDF</button>
+  </div>
+
+  <article class="document">
+    <header class="doc-header">
+      <div class="doc-eyebrow">AutoServicio San Jorge · Auditoría de Seguridad Web</div>
+      <h1>Guía de Pruebas de Seguridad (OWASP Top 10)</h1>
+      <p>Manual de verificación práctica para evaluar los 7 rubros de seguridad (A04 a A10) en el backend Express/PostgreSQL y el frontend React/Vite durante la revisión docente.</p>
+      <div class="meta-grid">
+        <div>
+          <div class="meta-label">Proyecto</div>
+          <div class="meta-val">AutoServicio San Jorge</div>
+        </div>
+        <div>
+          <div class="meta-label">Backend / API</div>
+          <div class="meta-val">http://localhost:4000</div>
+        </div>
+        <div>
+          <div class="meta-label">Frontend</div>
+          <div class="meta-val">http://localhost:5173</div>
+        </div>
+        <div>
+          <div class="meta-label">Total de Pruebas</div>
+          <div class="meta-val">25 casos (7 categorías)</div>
+        </div>
+      </div>
+    </header>
+
+    <main class="content">
+      <!-- Requisitos Previos -->
+      <section class="prereq-box">
+        <h2>⚙️ Requisitos previos para ejecutar las pruebas</h2>
+        <p style="font-size:0.88rem; color:#4B5563;">Ejecuta ambos servidores en terminales separadas y ten a la mano <strong>PowerShell</strong> (con <code>curl.exe</code>) y las <strong>DevTools del navegador</strong> (<code>F12</code> → <em>Network</em> y <em>Console</em>).</p>
+        <div class="prereq-grid">
+          <div>
+            <div style="font-size:0.8rem; font-weight:700; color:var(--navy); margin-bottom:0.25rem;">1. Backend (Puerto 4000)</div>
+            <pre style="margin:0;"><code>cd backend
+npm run dev</code></pre>
+          </div>
+          <div>
+            <div style="font-size:0.8rem; font-weight:700; color:var(--navy); margin-bottom:0.25rem;">2. Frontend (Puerto 5173)</div>
+            <pre style="margin:0;"><code>cd taller-frontend
+npm run dev</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- 1. A04 Diseño Inseguro -->
+      <section class="owasp-section">
+        <div class="section-header">
+          <div class="section-title-group">
+            <span class="owasp-badge">OWASP A04</span>
+            <h2>1. Diseño Inseguro</h2>
+          </div>
+          <span class="date-badge">17 Nov</span>
+        </div>
+
+        <div class="test-card">
+          <h3>Prueba 1.1 · Acceso directo a rutas críticas sin autenticación</h3>
+          <p class="test-obj">Verificar que el backend valide JWT y rol (RBAC) en todos los endpoints protegidos, sin depender solo de ocultar vistas en React.</p>
+          <pre><code>curl.exe -i http://localhost:4000/api/productos
+curl.exe -i -X DELETE http://localhost:4000/api/productos/9999
+curl.exe -i http://localhost:4000/api/reportes/ventas</code></pre>
+          <div class="result-row">
+            <div class="pill pill-ok"><strong>✅ Resultado esperado (Seguro)</strong>Responde <code>401 Unauthorized</code> sin token o <code>403 Forbidden</code> si el rol no es <code>Administrador</code>.</div>
+            <div class="pill pill-fail"><strong>❌ Evidencia si falla</strong>Responde <code>200 OK</code> o <code>404 Producto no encontrado</code> sin exigir autenticación.</div>
+          </div>
+        </div>
+
+        <div class="test-card">
+          <h3>Prueba 1.2 · Bypass de autenticación multifactor (MFA)</h3>
+          <p class="test-obj">Comprobar que un cliente no pueda saltarse el segundo factor enviando <code>skipMfa: true</code> en el cuerpo JSON del login.</p>
+          <pre><code>curl.exe -i -X POST http://localhost:4000/api/auth/login `
+  -H "Content-Type: application/json" `
+  -d '{"email":"admin@admin.com","password":"admin123","skipMfa":true}'</code></pre>
+          <div class="result-row">
+            <div class="pill pill-ok"><strong>✅ Resultado esperado (Seguro)</strong>Ignora <code>skipMfa</code> del body y exige el código OTP (<code>mfaRequired: true</code>).</div>
+            <div class="pill pill-fail"><strong>❌ Evidencia si falla</strong>Emite el <code>token</code> JWT directamente sin pasar por <code>/verify-mfa</code>.</div>
+          </div>
+        </div>
+
+        <div class="test-card">
+          <h3>Prueba 1.3 · Protección contra fuerza bruta (Rate Limiting)</h3>
+          <p class="test-obj">Validar que <code>authLimiter</code> (máximo 15 intentos cada 15 min) bloquee peticiones repetitivas.</p>
+          <pre><code>1..17 | ForEach-Object {
+  $code = curl.exe -s -o NUL -w "%{http_code}" -X POST http://localhost:4000/api/auth/login `
+    -H "Content-Type: application/json" `
+    -d '{"email":"admin@admin.com","password":"wrongpassword"}'
+  Write-Output "Intento $_ -> HTTP $code"
+}</code></pre>
+          <div class="result-row single">
+            <div class="pill pill-ok"><strong>✅ Resultado esperado (Seguro)</strong>A partir del intento 16 el servidor responde <code>429 Too Many Requests</code>.</div>
+          </div>
+        </div>
+
+        <div class="test-card">
+          <h3>Prueba 1.4 · Reglas de negocio (valores negativos en inventario y precios)</h3>
+          <p class="test-obj">Confirmar que el servidor rechaza precios o stock negativos aunque se salten las validaciones HTML del formulario.</p>
+          <pre><code>curl.exe -i -X POST http://localhost:4000/api/productos `
+  -H "Content-Type: application/json" `
+  -d '{"nombre":"Prueba Negativo","precio_venta":-500,"stock_actual":-10,"sku":"TEST-NEG-1"}'</code></pre>
+          <div class="result-row single">
+            <div class="pill pill-ok"><strong>✅ Resultado esperado (Seguro)</strong>Responde <code>400 Bad Request</code> rechazando cantidades o precios menores a cero.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. A05 Configuración Defectuosa -->
+      <section class="owasp-section">
+        <div class="section-header">
+          <div class="section-title-group">
+            <span class="owasp-badge">OWASP A05</span>
+            <h2>2. Configuración Defectuosa</h2>
+          </div>
+          <span class="date-badge">17 Nov</span>
+        </div>
+
+        <div class="test-card">
+          <h3>Prueba 2.1 · Cabeceras de seguridad HTTP (Helmet)</h3>
+          <p class="test-obj">Comprobar que el servidor incluye cabeceras defensivas y oculta <code>X-Powered-By: Express</code>.</p>
+          <pre><code>curl.exe -I http://localhost:4000/</code></pre>
+          <div class="result-row single">
+            <div class="pill pill-ok"><strong>✅ Resultado esperado (Seguro)</strong>No aparece <code>X-Powered-By</code> y sí están presentes <code>X-Content-Type-Options: nosniff</code>, <code>X-Frame-Options</code> / <code>Content-Security-Policy</code> y <code>Referrer-Policy</code>.</div>
+          </div>
+        </div>
+
+        <div class="test-card">
+          <h3>Prueba 2.2 · Política de CORS restrictiva</h3>
+          <p class="test-obj">Verificar que orígenes externos no autorizados sean rechazados por CORS.</p>
+          <pre><code>curl.exe -i -H "Origin: https://sitio-malicioso.com" http://localhost:4000/api/productos</code></pre>
+          <div class="result-row">
+            <div class="pill pill-ok"><strong>✅ Resultado esperado (Seguro)</strong>No devuelve <code>Access-Control-Allow-Origin: *</code> ni refleja el dominio malicioso.</div>
+            <div class="pill pill-fail"><strong>❌ Evidencia si falla</strong>Devuelve <code>Access-Control-Allow-Origin: *</code> permitiendo cualquier sitio web.</div>
+          </div>
+        </div>
+
+        <div class="test-card">
+          <h3>Prueba 2.3 · Control de fuga de información en errores y <code>/api/health</code></h3>
+          <p class="test-obj">Confirmar que las respuestas 404/500 y el endpoint de salud no expongan stack traces ni detalles de base de datos.</p>
+          <pre><code>curl.exe -i http://localhost:4000/api/ruta-inexistente
+curl.exe -i http://localhost:4000/api/health</code></pre>
+          <div class="result-row single">
+            <div class="pill pill-ok"><strong>✅ Resultado esperado (Seguro)</strong><code>404</code> JSON limpio sin stack trace; <code>/api/health</code> devuelve solo <code>{"status":"ok"}</code> sin <code>dbError</code> ni <code>hasDbUrl</code>.</div>
+          </div>
+        </div>
+
+        <div class="test-card">
+          <h3>Prueba 2.4 · Secretos y credenciales por defecto</h3>
+          <p class="test-obj">Inspección de código para verificar que no haya claves fijas ni usuarios con contraseñas débiles predefinidas.</p>
+          <ul class="steps">
+            <li>Revisar <code>backend/middleware/auth.js</code>: <code>JWT_SECRET</code> debe leerse obligatoriamente de <code>process.env.JWT_SECRET</code> (sin fallback hardcodeado).</li>
+            <li>Revisar <code>backend/index.js</code>: evitar crear <code>admin@admin.com</code> con contraseña <code>admin123</code> en producción.</li>
+          </ul>
+        </div>
+
+        <div class="test-card">
+          <h3>Prueba 2.5 · Límite de tamaño de payload JSON</h3>
+          <p class="test-obj">Prevenir ataques de denegación de servicio enviando cuerpos JSON excesivamente grandes.</p>
+          <ul class="steps">
+            <li>Verificar configuración <code>express.json({ limit: '100kb' })</code> en <code>backend/index.js</code> y enviar un cuerpo superior al límite.</li>
+          </ul>
+          <div class="result-row single">
+            <div class="pill pill-ok"><strong>✅ Resultado esperado (Seguro)</strong>El servidor rechaza la solicitud con código <code>413 Payload Too Large</code>.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. A06 Componentes Vulnerables -->
+      <section class="owasp-section">
+        <div class="section-header">
+          <div class="section-title-group">
+            <span class="owasp-badge">OWASP A06</span>
+            <h2>3. Componentes Vulnerables y Desactualizados</h2>
+          </div>
+          <span class="date-badge">17 Nov</span>
+        </div>
+
+        <div class="test-card">
+          <h3>Prueba 3.1 y 3.2 · Auditoría de dependencias (Backend y Frontend)</h3>
+          <p class="test-obj">Detectar vulnerabilidades (CVEs) conocidas y paquetes desactualizados en ambos proyectos Node.js.</p>
+          <pre><code>cd backend
+npm audit
+npm outdated
+
+cd ..\taller-frontend
+npm audit
+npm outdated</code></pre>
+          <div class="result-row single">
+            <div class="pill pill-ok"><strong>✅ Resultado esperado (Seguro)</strong>0 vulnerabilidades en severidad <code>high</code> y <code>critical</code> (corregidas con <code>npm audit fix</code> o actualización controlada).</div>
+          </div>
+        </div>
+
+        <div class="test-card">
+          <h3>Prueba 3.3 · Limpieza de dependencias y validación en CI/CD</h3>
+          <p class="test-obj">Reducir la superficie de ataque eliminando librerías sin uso y automatizando el chequeo en el pipeline.</p>
+          <ul class="steps">
+            <li>Confirmar la eliminación de dependencias sin uso (ej. <code>mysql2</code> en <code>backend/package.json</code> al usar PostgreSQL <code>pg</code>).</li>
+            <li>Confirmar que <code>.gitlab-ci.yml</code> o <code>.github/workflows/ci.yml</code> ejecute <code>npm audit --audit-level=high</code>.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- 4. A07 Identificación y Autenticación -->
+      <section class="owasp-section">
+        <div class="section-header">
+          <div class="section-title-group">
+            <span class="owasp-badge">OWASP A07</span>
+            <h2>4. Fallas de Identificación y Autenticación</h2>
+          </div>
+          <span class="date-badge">18 Nov</span>
+        </div>
+
+        <div class="test-card">
+          <h3>Prueba 4.1 · Política de contraseñas robustas</h3>
+          <p class="test-obj">Confirmar que el registro rechace contraseñas débiles o demasiado cortas.</p>
+          <pre><code>curl.exe -i -X POST http://localhost:4000/api/auth/register `
+  -H "Content-Type: application/json" `
+  -d '{"name":"Usuario Prueba","email":"debil@test.com","password":"1234567"}'</code></pre>
+          <div class="result-row single">
+            <div class="pill pill-ok"><strong>✅ Resultado esperado (Seguro)</strong>Responde <code>400 Bad Request</code> exigiendo mínimo 8 caracteres, mayúscula, minúscula, número y símbolo.</div>
+          </div>
+        </div>
+
+        <div class="test-card">
+          <h3>Prueba 4.2 · Prevención de enumeración de usuarios</h3>
+          <p class="test-obj">Verificar que las respuestas de error no revelen qué correos existen en la base de datos.</p>
+          <ul class="steps">
+            <li>Probar <code>POST /api/auth/login</code> con un correo inexistente y luego con un correo válido + contraseña incorrecta.</li>
+          </ul>
+          <div class="result-row single">
+            <div class="pill pill-ok"><strong>✅ Resultado esperado (Seguro)</strong>Ambos casos devuelven el mismo mensaje genérico (<code>Correo o contraseña incorrectos</code>) y código <code>401</code>.</div>
+          </div>
+        </div>
+
+        <div class="test-card">
+          <h3>Prueba 4.3 · Validación de JWT inválido o ausente</h3>
+          <p class="test-obj">Asegurar que el middleware rechace tokens manipulados, firmados con otra clave o vencidos.</p>
+          <pre><code>curl.exe -i http://localhost:4000/api/auth/me
+curl.exe -i -H "Authorization: Bearer token.invalido.123" http://localhost:4000/api/auth/me</code></pre>
+          <div class="result-row single">
+            <div class="pill pill-ok"><strong>✅ Resultado esperado (Seguro)</strong><code>401 Unauthorized</code> sin token y <code>403 Forbidden</code> con token alterado o expirado.</div>
+          </div>
+        </div>
+
+        <div class="test-card">
+          <h3>Prueba 4.4 · Seguridad del flujo MFA (OTP)</h3>
+          <p class="test-obj">Validar generación segura, expiración, límite de intentos y no exposición del código en la respuesta.</p>
+          <ul class="steps">
+            <li>Revisar que el OTP se genere con <code>crypto.randomInt(100000, 1000000)</code> y no con <code>Math.random()</code>.</li>
+            <li>Verificar que la respuesta de <code>/api/auth/login</code> no incluya <code>otpDev</code> en producción.</li>
+            <li>Probar 5 códigos erróneos consecutivos en <code>/api/auth/verify-mfa</code> y comprobar que la sesión temporal se invalida.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- 5. A08 Integridad -->
+      <section class="owasp-section">
+        <div class="section-header">
+          <div class="section-title-group">
+            <span class="owasp-badge">OWASP A08</span>
+            <h2>5. Fallas de Integridad de Software y Datos</h2>
+          </div>
+        </div>
+
+        <div class="test-card">
+          <h3>Prueba 5.1 · Integridad de dependencias en CI/CD</h3>
+          <p class="test-obj">Garantizar instalaciones deterministas mediante hashes verificados en <code>package-lock.json</code>.</p>
+          <ul class="steps">
+            <li>Verificar el uso de <code>npm ci</code> (y no <code>npm install</code>) en <code>.gitlab-ci.yml</code> y <code>Dockerfile</code>.</li>
+          </ul>
+        </div>
+
+        <div class="test-card">
+          <h3>Prueba 5.2 · Manipulación de precios y totales desde el cliente</h3>
+          <p class="test-obj">Confirmar que el backend calcula totales consultando el precio real en PostgreSQL y no confía en el monto enviado por el navegador.</p>
+          <pre><code>curl.exe -i -X POST http://localhost:4000/api/ventas `
+  -H "Content-Type: application/json" `
+  -d '{"idUsuarios":1,"metodo_pago":1,"total":1,"items":[{"idProductos":1,"cantidad":5,"precio_unitario":0.01}]}'</code></pre>
+          <div class="result-row single">
+            <div class="pill pill-ok"><strong>✅ Resultado esperado (Seguro)</strong>El servidor ignora <code>total: 1</code> y <code>precio_unitario: 0.01</code>, recalcula con el precio oficial de la tabla <code>Productos</code> o rechaza la petición.</div>
+          </div>
+        </div>
+
+        <div class="test-card">
+          <h3>Prueba 5.3 · Prevención de Mass Assignment e integridad de recursos (SRI)</h3>
+          <p class="test-obj">Evitar escalación de privilegios por campos extra en el JSON y scripts externos sin verificación de integridad.</p>
+          <ul class="steps">
+            <li>Enviar <code>"role":"Administrador"</code> o <code>"idRoles":1</code> dentro de <code>POST /api/auth/register</code> y verificar que el usuario se cree únicamente como <code>Cliente</code>.</li>
+            <li>Revisar <code>taller-frontend/index.html</code> para confirmar que no existan scripts externos sin atributo <code>integrity</code> (SRI).</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- 6. A09 Registro y Monitoreo -->
+      <section class="owasp-section">
+        <div class="section-header">
+          <div class="section-title-group">
+            <span class="owasp-badge">OWASP A09</span>
+            <h2>6. Fallas de Registro y Monitoreo de Seguridad</h2>
+          </div>
+        </div>
+
+        <div class="test-card">
+          <h3>Prueba 6.1 · Registro de eventos de autenticación y accesos denegados</h3>
+          <p class="test-obj">Comprobar que los intentos fallidos de login, MFA y respuestas 401/403 queden almacenados en bitácora.</p>
+          <ul class="steps">
+            <li>Ejecutar 3 logins fallidos, 1 login exitoso y 1 petición sin token a una ruta protegida.</li>
+            <li>Consultar el archivo de logs o la tabla <code>AuditLogs</code> y verificar campos: <code>fecha/hora</code>, <code>IP</code>, <code>usuario</code>, <code>endpoint</code> y <code>resultado</code>.</li>
+          </ul>
+        </div>
+
+        <div class="test-card">
+          <h3>Prueba 6.2 · Auditoría de acciones críticas</h3>
+          <p class="test-obj">Garantizar trazabilidad al crear, editar o eliminar productos, usuarios, roles o ventas.</p>
+          <ul class="steps">
+            <li>Modificar el stock de un producto o cambiar el rol de un usuario y verificar el registro correspondiente en la bitácora.</li>
+          </ul>
+        </div>
+
+        <div class="test-card">
+          <h3>Prueba 6.3 · Protección de datos sensibles en logs</h3>
+          <p class="test-obj">Asegurar que nunca se escriban secretos en consola ni en archivos de auditoría.</p>
+          <div class="result-row single">
+            <div class="pill pill-ok"><strong>✅ Resultado esperado (Seguro)</strong>Tras iniciar sesión y validar MFA, en la consola/logs <strong>no aparece</strong> el código <code>mfaCode</code>, ninguna contraseña ni el <code>token</code> JWT.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7. A10 SSRF -->
+      <section class="owasp-section">
+        <div class="section-header">
+          <div class="section-title-group">
+            <span class="owasp-badge">OWASP A10</span>
+            <h2>7. Server-Side Request Forgery (SSRF)</h2>
+          </div>
+        </div>
+
+        <div class="test-card">
+          <h3>Prueba 7.1 · Bloqueo de red interna y localhost</h3>
+          <p class="test-obj">Verificar que cualquier campo URL procesado por el servidor bloquee direcciones locales o privadas.</p>
+          <pre><code>URLs de prueba que deben ser rechazadas:
+- http://127.0.0.1:4000/api/health
+- http://localhost:5432
+- http://10.0.0.1/
+- http://192.168.1.1/</code></pre>
+          <div class="result-row single">
+            <div class="pill pill-ok"><strong>✅ Resultado esperado (Seguro)</strong>Responde <code>400 Bad Request</code> antes de abrir ninguna conexión saliente.</div>
+          </div>
+        </div>
+
+        <div class="test-card">
+          <h3>Prueba 7.2 · Bloqueo de metadatos cloud</h3>
+          <p class="test-obj">Prevenir robo de credenciales en entornos AWS/GCP/Azure mediante la IP link-local de metadatos.</p>
+          <pre><code>URL de prueba: http://169.254.169.254/latest/meta-data/</code></pre>
+          <div class="result-row single">
+            <div class="pill pill-ok"><strong>✅ Resultado esperado (Seguro)</strong>Bloqueada con <code>400 Bad Request</code> por pertenecer al rango reservado <code>169.254.0.0/16</code>.</div>
+          </div>
+        </div>
+
+        <div class="test-card">
+          <h3>Prueba 7.3 · Protocolos prohibidos y lista blanca de dominios</h3>
+          <p class="test-obj">Confirmar que solo se aceptan URLs <code>https://</code> hacia dominios explícitamente autorizados.</p>
+          <pre><code>URLs rechazadas:
+- file:///etc/passwd
+- ftp://servidor.com/archivo
+- https://dominio-no-autorizado.com/imagen.png</code></pre>
+          <div class="result-row single">
+            <div class="pill pill-ok"><strong>✅ Resultado esperado (Seguro)</strong>Todas rechazadas con <code>400 Bad Request</code>; solo pasan dominios en la lista blanca con <code>https://</code>.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Checklist Final -->
+      <section class="owasp-section checklist-section">
+        <div class="section-header">
+          <div class="section-title-group">
+            <span class="owasp-badge">EVALUACIÓN</span>
+            <h2>Checklist de Revisión Docente</h2>
+          </div>
+        </div>
+
+        <table class="checklist-table">
+          <thead>
+            <tr>
+              <th style="width:55px;">ID</th>
+              <th style="width:190px;">Categoría OWASP</th>
+              <th>Descripción de la Prueba</th>
+              <th style="text-align:center; width:75px;">Cumple</th>
+              <th style="width:180px;">Observaciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>1.1</strong></td><td>A04 Diseño Inseguro</td><td>Rutas críticas protegidas con JWT + RBAC</td><td class="chk-cell"><input type="checkbox" /></td><td></td></tr>
+            <tr><td><strong>1.2</strong></td><td>A04 Diseño Inseguro</td><td>Bloqueo de bypass <code>skipMfa</code> desde cliente</td><td class="chk-cell"><input type="checkbox" /></td><td></td></tr>
+            <tr><td><strong>1.3</strong></td><td>A04 Diseño Inseguro</td><td>Rate limiting activo (<code>429</code>)</td><td class="chk-cell"><input type="checkbox" /></td><td></td></tr>
+            <tr><td><strong>1.4</strong></td><td>A04 Diseño Inseguro</td><td>Rechazo de precios y stock negativos</td><td class="chk-cell"><input type="checkbox" /></td><td></td></tr>
+            <tr><td><strong>2.1</strong></td><td>A05 Config Defectuosa</td><td>Cabeceras <code>Helmet</code> y sin <code>X-Powered-By</code></td><td class="chk-cell"><input type="checkbox" /></td><td></td></tr>
+            <tr><td><strong>2.2</strong></td><td>A05 Config Defectuosa</td><td>CORS restringido a orígenes válidos</td><td class="chk-cell"><input type="checkbox" /></td><td></td></tr>
+            <tr><td><strong>2.3</strong></td><td>A05 Config Defectuosa</td><td>404/500 y <code>/api/health</code> sin fugas</td><td class="chk-cell"><input type="checkbox" /></td><td></td></tr>
+            <tr><td><strong>2.4</strong></td><td>A05 Config Defectuosa</td><td>Sin secretos ni credenciales hardcodeadas</td><td class="chk-cell"><input type="checkbox" /></td><td></td></tr>
+            <tr><td><strong>2.5</strong></td><td>A05 Config Defectuosa</td><td>Límite de tamaño de payload JSON</td><td class="chk-cell"><input type="checkbox" /></td><td></td></tr>
+            <tr><td><strong>3.1</strong></td><td>A06 Comp. Vulnerables</td><td><code>npm audit</code> limpio en <code>backend</code></td><td class="chk-cell"><input type="checkbox" /></td><td></td></tr>
+            <tr><td><strong>3.2</strong></td><td>A06 Comp. Vulnerables</td><td><code>npm audit</code> limpio en <code>taller-frontend</code></td><td class="chk-cell"><input type="checkbox" /></td><td></td></tr>
+            <tr><td><strong>3.3</strong></td><td>A06 Comp. Vulnerables</td><td>Sin paquetes sobrantes y auditoría en CI</td><td class="chk-cell"><input type="checkbox" /></td><td></td></tr>
+            <tr><td><strong>4.1</strong></td><td>A07 Identificación</td><td>Contraseñas robustas obligatorias</td><td class="chk-cell"><input type="checkbox" /></td><td></td></tr>
+            <tr><td><strong>4.2</strong></td><td>A07 Identificación</td><td>Sin enumeración de usuarios</td><td class="chk-cell"><input type="checkbox" /></td><td></td></tr>
+            <tr><td><strong>4.3</strong></td><td>A07 Identificación</td><td>Rechazo de JWT inválido o expirado</td><td class="chk-cell"><input type="checkbox" /></td><td></td></tr>
+            <tr><td><strong>4.4</strong></td><td>A07 Identificación</td><td>OTP con <code>crypto.randomInt</code>, límite intentos, sin <code>otpDev</code></td><td class="chk-cell"><input type="checkbox" /></td><td></td></tr>
+            <tr><td><strong>5.1</strong></td><td>A08 Integridad</td><td><code>npm ci</code> + <code>package-lock.json</code> en CI/Docker</td><td class="chk-cell"><input type="checkbox" /></td><td></td></tr>
+            <tr><td><strong>5.2</strong></td><td>A08 Integridad</td><td>Totales/precios recalculados en servidor</td><td class="chk-cell"><input type="checkbox" /></td><td></td></tr>
+            <tr><td><strong>5.3</strong></td><td>A08 Integridad</td><td>Sin mass assignment de roles y SRI revisado</td><td class="chk-cell"><input type="checkbox" /></td><td></td></tr>
+            <tr><td><strong>6.1</strong></td><td>A09 Registro</td><td>Logs de logins, fallos MFA y 401/403</td><td class="chk-cell"><input type="checkbox" /></td><td></td></tr>
+            <tr><td><strong>6.2</strong></td><td>A09 Registro</td><td>Auditoría de cambios críticos</td><td class="chk-cell"><input type="checkbox" /></td><td></td></tr>
+            <tr><td><strong>6.3</strong></td><td>A09 Registro</td><td>Sin secretos ni OTP en consola/logs</td><td class="chk-cell"><input type="checkbox" /></td><td></td></tr>
+            <tr><td><strong>7.1</strong></td><td>A10 SSRF</td><td>Bloqueo de <code>127.0.0.1</code>, <code>localhost</code> e IPs privadas</td><td class="chk-cell"><input type="checkbox" /></td><td></td></tr>
+            <tr><td><strong>7.2</strong></td><td>A10 SSRF</td><td>Bloqueo de metadatos cloud (<code>169.254.169.254</code>)</td><td class="chk-cell"><input type="checkbox" /></td><td></td></tr>
+            <tr><td><strong>7.3</strong></td><td>A10 SSRF</td><td>Lista blanca de dominios y solo <code>https://</code></td><td class="chk-cell"><input type="checkbox" /></td><td></td></tr>
+          </tbody>
+        </table>
+
+        <div class="footer-sign">
+          <div><div class="sign-line">Alumno / Equipo de Desarrollo</div></div>
+          <div><div class="sign-line">Revisión Docente</div></div>
+        </div>
+      </section>
+    </main>
+  </article>
+</body>
+</html>
