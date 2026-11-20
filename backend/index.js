@@ -23,7 +23,6 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
 
 const bcrypt = require('bcryptjs');
 const pool = require('./db');
@@ -59,37 +58,6 @@ app.disable('x-powered-by');
 
 app.use(cors());
 app.use(express.json());
-
-// ---------------------------------------------------------------------------
-// Rate Limiting (Protección contra DDoS y Fuerza Bruta)
-// ---------------------------------------------------------------------------
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 300, // Límite general de peticiones por IP
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    status: 429,
-    error: 'Demasiadas solicitudes desde esta dirección IP. Intente de nuevo en 15 minutos.'
-  }
-});
-
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 15, // Máximo 15 intentos en autenticación
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    status: 429,
-    error: 'Demasiados intentos de acceso desde esta IP. Bloqueado temporalmente por 15 minutos por seguridad.'
-  }
-});
-
-app.use('/api', apiLimiter);
-app.use('/api/auth/login', authLimiter);
-app.use('/api/auth/register', authLimiter);
-app.use('/auth/login', authLimiter);
-app.use('/auth/register', authLimiter);
 
 /**
  * Roles por defecto que se insertan al inicializar la base de datos
