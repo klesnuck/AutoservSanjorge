@@ -88,10 +88,8 @@ const authLimiter = rateLimit({
 app.use('/api', apiLimiter);
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
-app.use('/api/auth/verify-mfa', authLimiter);
 app.use('/auth/login', authLimiter);
 app.use('/auth/register', authLimiter);
-app.use('/auth/verify-mfa', authLimiter);
 
 /**
  * Roles por defecto que se insertan al inicializar la base de datos
