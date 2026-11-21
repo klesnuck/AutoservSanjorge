@@ -128,3 +128,27 @@ deploy_staging:
     - curl --fail --silent --show-error "http://127.0.0.1:${FRONTEND_PORT}/api/health"
   after_script:
     - docker logout "$CI_REGISTRY"
+
+deploy_production:
+  stage: deploy
+  needs:
+    - job: pruebas
+      artifacts: false
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "web")'
+  resource_group: production
+  environment:
+    name: production
+    url: https://autoservsanjorge.vercel.app
+  script:
+    - |
+      for variable in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID; do
+        if [ -z "${!variable}" ]; then
+          echo "Falta $variable. Revisa las variables CI/CD y la protección de main."
+          exit 1
+        fi
+      done
+    - npm install --global vercel@latest
+    - vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+    - vercel build --prod --token="$VERCEL_TOKEN"
+    - vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN" -m gitlabDeployment="1" -m gitlabCommitRef="$CI_COMMIT_BRANCH" -m gitlabCommitSha="$CI_COMMIT_SHA"
