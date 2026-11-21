@@ -12,3 +12,5 @@ test-results/
 .DS_Store
 dist/
 >>>>>>> 2bd19bb2536e77d26ef9a60df3a1db4f90aab5c6
+.vercel
+.env*
